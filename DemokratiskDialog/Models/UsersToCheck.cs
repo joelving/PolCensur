@@ -1,11 +1,28 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
+﻿using System.Collections.Generic;
 
 namespace DemokratiskDialog.Models
 {
-    public class UsersToCheck : List<string>
+    public class UsersToCheck : List<Influencer>
     {
+        public UsersToCheck() : base() { }
+        public UsersToCheck(IEnumerable<Influencer> source) : base(source) { }
+    }
+
+    public class Influencer
+    {
+        public UserCategory Category { get; set; }
+        public TwitterUser Profile { get; set; }
+    }
+
+    public enum UserCategory
+    {
+        Unspecified,
+        Politician,
+        Spin,
+        Journalist,
+        Lobby,
+        Business,
+        Union,
+        Public
     }
 }

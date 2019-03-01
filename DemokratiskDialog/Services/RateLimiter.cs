@@ -7,12 +7,21 @@ using System.Threading.Tasks;
 
 namespace DemokratiskDialog.Services
 {
-    public class UserTimelineRateLimiter : RateLimiter
+    public class TwitterRateLimits
     {
-        public UserTimelineRateLimiter()
-            : base(900, TimeSpan.FromMinutes(15))
+        public UserRateLimits User { get; } = new UserRateLimits();
+        public class UserRateLimits
         {
+            public RateLimiter Timeline { get; } = new RateLimiter(900, TimeSpan.FromMinutes(15));
+        }
 
+        public AppRateLimits App { get; } = new AppRateLimits();
+        public class AppRateLimits
+        {
+            public RateGate Timeline { get; } = new RateGate(1500, TimeSpan.FromMinutes(15));
+            public RateGate Lookup { get; } = new RateGate(300, TimeSpan.FromMinutes(15));
+            public RateGate Show { get; } = new RateGate(900, TimeSpan.FromMinutes(15));
+            public RateGate ListMembers { get; } = new RateGate(75, TimeSpan.FromMinutes(15));
         }
     }
 

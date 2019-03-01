@@ -1,0 +1,23 @@
+﻿@page "/error"
+@model DemokratiskDialog.Pages.ErrorModel
+@{
+    ViewData["Title"] = "Fejl";
+}
+
+<h1 class="text-danger">Fejl</h1>
+<h2 class="text-danger">Der opstod en fejl i forsøget på at behandle din forespørgsel.</h2>
+
+@if (Model.ShowRequestId)
+{
+    <p>
+        <strong>ForespørgselsId:</strong> <code>@Model.RequestId</code>
+    </p>
+}
+
+<p>
+    Prøv venligst igen senere, eller kontakt <a href="mailto:support@polcensur.dk">support@polcensur.dk</a>.
+    @if (Model.ShowRequestId)
+    {
+        <span>Husk at medsende dit ForespørgselsId.</span>
+    }
+</p>

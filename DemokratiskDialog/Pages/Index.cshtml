@@ -1,0 +1,93 @@
+﻿@page "/"
+@model DemokratiskDialog.Pages.IndexModel
+@{
+    ViewData["Title"] = "polcensur.dk";
+}
+
+<style>
+    .blocked-profiles {
+        display: flex;
+    }
+    .blocked-profile {
+        margin-right: .25em;
+        max-width: 12.5%
+    }
+    .blocking-profile {
+        position: relative;
+    }
+    .blocking-profile img {
+        width: 100%;
+    }
+    .blocking-profile .title {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        color: black;
+        /*padding: .25em;*/
+        /*font-size: 1.25em;*/
+        font-weight: bold;
+        background-color: rgba(255,255,255,.6);
+        text-align: center;
+    }
+</style>
+
+<div class="jumbotron-fluid">
+    <div class="container">
+        <h1 class="display-4">Velkommen til polcensur.dk</h1>
+        <p class="lead">Her finder du en oversigt over hvilke af de mest indflydelsesrige i politik, der flittigst blokerer sine meddebattører.</p>
+        <hr />
+        <p>
+            Du har også mulighed for selv at kontrollere, hvilke magtpersoner, der blokerer dig og bidrage med dine data til projektet.<br />
+            Vi håber, at vi ved at sætte fokus på denne uskik, kan bidrage til en bedre demokratisk samtale på de sociale medier.
+        </p>
+        <p class="text-center">
+            <a href="#check" title="Kontrollér dine egne blokeringer" class="btn btn-primary">Kontrollér dine egne blokeringer</a>
+        </p>
+    </div>
+</div>
+
+
+<h2 class="text-center mt-5">Top 10 flittigste* blockere</h2>
+<p class="text-muted text-center"><small>Baseret på kontrol af @Model.UsersChecked @(Model.UsersChecked == 1 ? "brugers" : "brugeres") Twitter-blokeringer.</small></p>
+@foreach (var blocker in Model.Blockers)
+{
+<div class="row mb-5 align-items-end">
+    <div class="col-12 col-sm-4 blocking-profile">
+        <a href="https://twitter.com/@blocker.Handle" title="@blocker.Handle" target="_blank" rel="noopener">
+            <img src="@blocker.ImageUrl.Replace("_normal", "_400x400")" />
+            <div class="title">
+                @@@blocker.Handle<br />
+                I alt @blocker.BlockCount @(blocker.BlockCount == 1 ? "blokering" : "blokeringer")
+            </div>
+        </a>
+    </div>
+    <div class="d-none d-sm-block col-sm-8">
+        <div class="blocked-profiles">
+            @foreach (var blocked in blocker.BlockedProfiles)
+            {
+                <div class="blocked-profile"><a href="https://twitter.com/@blocked.Handle" title="@blocked.Handle" target="_blank" rel="noopener"><img src="@blocked.ProfilePictureUrl.Replace("_normal", "_bigger")" class="img-fluid" /></a></div>
+            }
+        </div>
+    </div>
+    <div class="col-12 col-md-2 d-none d-sm-block">
+        @if (blocker.BlockCount > blocker.BlockedProfiles.Count)
+        {
+            var more = blocker.BlockCount - blocker.BlockedProfiles.Count;
+            <span>Samt<span class="badge badge-secondary m-1">@more</span> @(more == 1 ? "anden" : "andre")</span>
+        }
+    </div>
+</div>
+}
+
+<div id="check">
+    <partial name="_LatestJobState" model="Model.LatestJob" />
+    @if (Model.CanSubmit)
+    {
+        <partial name="_CheckSubmissionPartial" model="new CheckSubmissionModel { Publicity = Model.DefaultPublicity }" />
+    }
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

@@ -1,36 +1,50 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
-using System.Linq;
-using System.Security.Claims;
+﻿using System.Linq;
 using System.Threading.Tasks;
+using DemokratiskDialog.Data;
+using DemokratiskDialog.Extensions;
+using DemokratiskDialog.Models;
+using DemokratiskDialog.Services;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.Extensions.Logging;
+using NodaTime;
 
 namespace DemokratiskDialog.Areas.Identity.Pages.Account
 {
     [AllowAnonymous]
     public class ExternalLoginModel : PageModel
     {
-        private readonly SignInManager<IdentityUser> _signInManager;
-        private readonly UserManager<IdentityUser> _userManager;
+        private readonly ApplicationDbContext _dbContext;
+        private readonly SignInManager<ApplicationUser> _signInManager;
+        private readonly UserManager<ApplicationUser> _userManager;
+        private readonly IBackgroundQueue<CheckBlockedJob> _queue;
+        private readonly TwitterService _twitterService;
+        private readonly IDataProtectionProvider _protectionProvider;
+        private readonly IClock _clock;
         private readonly ILogger<ExternalLoginModel> _logger;
 
         public ExternalLoginModel(
-            SignInManager<IdentityUser> signInManager,
-            UserManager<IdentityUser> userManager,
+            ApplicationDbContext dbContext,
+            SignInManager<ApplicationUser> signInManager,
+            UserManager<ApplicationUser> userManager,
+            IBackgroundQueue<CheckBlockedJob> queue,
+            TwitterService twitterService,
+            IDataProtectionProvider protectionProvider,
+            IClock clock,
             ILogger<ExternalLoginModel> logger)
         {
+            _dbContext = dbContext;
             _signInManager = signInManager;
             _userManager = userManager;
+            _queue = queue;
+            _twitterService = twitterService;
+            _protectionProvider = protectionProvider;
+            _clock = clock;
             _logger = logger;
         }
-
-        [BindProperty]
-        public InputModel Input { get; set; }
 
         public string LoginProvider { get; set; }
 
@@ -38,13 +52,6 @@ namespace DemokratiskDialog.Areas.Identity.Pages.Account
 
         [TempData]
         public string ErrorMessage { get; set; }
-
-        public class InputModel
-        {
-            [Required]
-            [EmailAddress]
-            public string Email { get; set; }
-        }
 
         public IActionResult OnGetAsync()
         {
@@ -59,18 +66,18 @@ namespace DemokratiskDialog.Areas.Identity.Pages.Account
             return new ChallengeResult(provider, properties);
         }
 
-        public async Task<IActionResult> OnGetCallbackAsync(string returnUrl = null, string remoteError = null)
+        public async Task<IActionResult> OnGetCallbackAsync(string returnUrl = null, string remoteError = null, bool run = false, string email = null, bool? publicity = null)
         {
             returnUrl = returnUrl ?? Url.Content("~/");
             if (remoteError != null)
             {
-                ErrorMessage = $"Error from external provider: {remoteError}";
+                ErrorMessage = $"Fejl fra eksternt login: {remoteError}";
                 return RedirectToPage("./Login", new {ReturnUrl = returnUrl });
             }
             var info = await _signInManager.GetExternalLoginInfoAsync();
             if (info == null)
             {
-                ErrorMessage = "Error loading external login information.";
+                ErrorMessage = "Vi kunne ikke genfinde dine logininformationer. Prøv venligst igen.";
                 return RedirectToPage("./Login", new { ReturnUrl = returnUrl });
             }
 
@@ -79,6 +86,27 @@ namespace DemokratiskDialog.Areas.Identity.Pages.Account
             if (result.Succeeded)
             {
                 _logger.LogInformation("{Name} logged in with {LoginProvider} provider.", info.Principal.Identity.Name, info.LoginProvider);
+                var user = await _userManager.FindByLoginAsync(info.LoginProvider, info.ProviderKey);
+                if (publicity.HasValue)
+                {
+                    user.ShowProfileWithBlocks = publicity.Value;
+                    await _userManager.UpdateAsync(user);
+                }
+
+                if (run)
+                {
+                    if (!(await _dbContext.CanStartNewJobs(_clock, user.Id)))
+                        return RedirectToPage("/Check");
+
+                    await StartJob(
+                        email,
+                        user.Id,
+                        info.ProviderKey,
+                        info.Principal.Identity.Name,
+                        info.AuthenticationTokens.FirstOrDefault(t => t.Name == "access_token")?.Value,
+                        info.AuthenticationTokens.FirstOrDefault(t => t.Name == "access_token_secret")?.Value
+                    );
+                }
                 return LocalRedirect(returnUrl);
             }
             if (result.IsLockedOut)
@@ -87,54 +115,70 @@ namespace DemokratiskDialog.Areas.Identity.Pages.Account
             }
             else
             {
-                // If the user does not have an account, then ask the user to create an account.
+                // If the user does not have an account, create it.
                 ReturnUrl = returnUrl;
                 LoginProvider = info.LoginProvider;
-                if (info.Principal.HasClaim(c => c.Type == ClaimTypes.Email))
+
+                var profile = await _twitterService.ShowByScreenName(info.Principal.Identity.Name);
+                var user = new ApplicationUser {
+                    UserName = info.Principal.Identity.Name,
+                    ProfilePictureUrl = profile?.ProfileImageUrlHttps.ToString(),
+                    ShowProfileWithBlocks = publicity ?? false
+                };
+                var createResult = await _userManager.CreateAsync(user);
+                if (createResult.Succeeded)
                 {
-                    Input = new InputModel
+                    createResult = await _userManager.AddLoginAsync(user, info);
+                    if (createResult.Succeeded)
                     {
-                        Email = info.Principal.FindFirstValue(ClaimTypes.Email)
-                    };
+                        await _signInManager.SignInAsync(user, isPersistent: false);
+                        _logger.LogInformation("User created an account using {Name} provider.", info.LoginProvider);
+
+                        if (run)
+                        {
+                            if (!(await _dbContext.CanStartNewJobs(_clock, user.Id)))
+                                return RedirectToPage("/Check");
+
+                            await StartJob(
+                                email,
+                                user.Id,
+                                info.ProviderKey,
+                                info.Principal.Identity.Name,
+                                info.AuthenticationTokens.FirstOrDefault(t => t.Name == "access_token")?.Value,
+                                info.AuthenticationTokens.FirstOrDefault(t => t.Name == "access_token_secret")?.Value
+                            );
+                        }
+                        return LocalRedirect(returnUrl);
+                    }
                 }
                 return Page();
             }
         }
 
-        public async Task<IActionResult> OnPostConfirmationAsync(string returnUrl = null)
+        private async Task StartJob(string email, string checkingForUserId, string checkingForTwitterId, string checkingForScreenname, string accessToken, string accessTokenSecret)
         {
-            returnUrl = returnUrl ?? Url.Content("~/");
-            // Get the information about the user from the external login provider
-            var info = await _signInManager.GetExternalLoginInfoAsync();
-            if (info == null)
+            string protectedToken = null, protectedTokenSecret = null;
+            if (accessTokenSecret != null)
             {
-                ErrorMessage = "Error loading external login information during confirmation.";
-                return RedirectToPage("./Login", new { ReturnUrl = returnUrl });
+                var protector = _protectionProvider.CreateProtector(checkingForUserId);
+                protectedToken = protector.Protect(accessToken);
+                protectedTokenSecret = protector.Protect(accessTokenSecret);
             }
-
-            if (ModelState.IsValid)
+            var job = new CheckBlockedJob
             {
-                var user = new IdentityUser { UserName = Input.Email, Email = Input.Email };
-                var result = await _userManager.CreateAsync(user);
-                if (result.Succeeded)
-                {
-                    result = await _userManager.AddLoginAsync(user, info);
-                    if (result.Succeeded)
-                    {
-                        await _signInManager.SignInAsync(user, isPersistent: false);
-                        _logger.LogInformation("User created an account using {Name} provider.", info.LoginProvider);
-                        return LocalRedirect(returnUrl);
-                    }
-                }
-                foreach (var error in result.Errors)
-                {
-                    ModelState.AddModelError(string.Empty, error.Description);
-                }
-            }
+                Email = email,
+                State = CheckBlockedJob.CheckBlockedJobState.Pending,
+                LastUpdate = _clock.GetCurrentInstant(),
+                CheckingForUserId = checkingForUserId,
+                CheckingForTwitterId = checkingForTwitterId,
+                CheckingForScreenName = checkingForScreenname,
+                AccessToken = protectedToken,
+                AccessTokenSecret = protectedTokenSecret
+            };
 
-            LoginProvider = info.LoginProvider;
-            ReturnUrl = returnUrl;
-            return Page();
+            _dbContext.Jobs.Add(job);
+            await _dbContext.SaveChangesAsync();
+            await _queue.EnqueueAsync(job, HttpContext.RequestAborted);
         }
     }
 }

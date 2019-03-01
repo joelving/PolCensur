@@ -1,0 +1,42 @@
+﻿@model CheckBlockedJob
+@inject IClock _clock
+
+@if (!(Model is null))
+{
+    if (Model.State == CheckBlockedJob.CheckBlockedJobState.Pending)
+    {
+        <div class="alert alert-info">
+            Din kontrol er sat i kø og vil blive igangsat hurtigst muligt.<br />
+            Vi kører op til 50 kontroller ad gangen, så medmindre der er meget travlt, burde den starte indenfor ganske kort tid.
+        </div>
+    }
+    else if (Model.State == CheckBlockedJob.CheckBlockedJobState.Running)
+    {
+        if (_clock.GetCurrentInstant().Minus(Model.LastUpdate) > Duration.FromHours(2))
+        {
+            <div class="alert alert-warning">
+                Din kontrol er sat igang, men ser ud til at være usædvanlig lang tid om at blive færdig.<br />
+                Kontrollen blev igangsat @Model.LastUpdate og tager typisk 1½ times tid.<br />
+                Du kan enten væbne dig med tålmodighed eller forsøge at igangsætte en ny.
+            </div>
+        }
+        else
+        {
+            <div class="alert alert-info">
+                Du har en kontrol kørende, som blev igangsat @Model.LastUpdate.ToDanishTime()</div>
+        }
+    }
+    else if (Model.State == CheckBlockedJob.CheckBlockedJobState.Completed)
+    {
+        <div class="alert alert-success">
+            Din kontrol er gennemført, og du kan se resultatet under <a asp-area="Identity" asp-page="/Account/Manage/Blocks" title="Dine blokeringer">dine blokeringer</a>.
+        </div>
+    }
+    else if (Model.State == CheckBlockedJob.CheckBlockedJobState.Failed)
+    {
+        <div class="alert alert-info">
+            Din kontrol fejlede under udførslen. Det kan enten skylde en teknisk fejl fra vores side - det beklager vi! - eller at tilladelse til at tilgå din Twitter-konto er blevet trukket tilbage.<br />
+            I alle tilfælde må du meget gerne forsøge igen - og kontakte os på <a href="mailto:support@polcensur.dk" title="Skriv til supporten">support@polcensur.dk</a>, hvis det fortsætter.
+        </div>
+    }
+}

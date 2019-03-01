@@ -1,0 +1,18 @@
+﻿@page
+@model DemokratiskDialog.Pages.GetFromListsModel
+@{
+    ViewData["Title"] = "GetFromLists";
+}
+
+<h1>GetFromLists</h1>
+
+<p>I alt @Model.Profiles.Count profiler</p>
+
+@foreach (var group in Model.Profiles.GroupBy(p => p.Category))
+{
+    <h2>@group.Key (i alt @group.Count())</h2>
+    foreach (var profile in group)
+    {
+        <div>@profile.Profile.IdStr:    @profile.Profile.ScreenName</div>
+    }
+}

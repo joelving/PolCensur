@@ -39,12 +39,19 @@ namespace DemokratiskDialog.Services
 
                     using (var scope = _scopeFactory.CreateScope())
                     {
-                        var logger = scope.ServiceProvider.GetRequiredService<ILogger<IBackgroundJobProcessor<T>>>();
-                        logger.LogInformation($"Processing job on thread {Thread.CurrentThread.ManagedThreadId} which is a {ThreadKind} thread.");
-                        var processor = scope.ServiceProvider.GetRequiredService<IBackgroundJobProcessor<T>>();
+                        try
+                        {
+                            var logger = scope.ServiceProvider.GetRequiredService<ILogger<IBackgroundJobProcessor<T>>>();
+                            logger.LogInformation($"Processing job on thread {Thread.CurrentThread.ManagedThreadId} which is a {ThreadKind} thread.");
+                            var processor = scope.ServiceProvider.GetRequiredService<IBackgroundJobProcessor<T>>();
 
-                        // The queue is running on it's own thread, dispatching jobs to the thread pool. This is fine since the processing is async and non-blocking.
-                        await processor.ProcessJob(item, cancellationToken);
+                            // The queue is running on it's own thread, dispatching jobs to the thread pool. This is fine since the processing is async and non-blocking.
+                            await processor.ProcessJob(item, cancellationToken);
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogError("This is bad", ex);
+                        }
                     }
                 }, cancellationToken);
             }

@@ -1,8 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Net.Http;
-using System.Threading.Tasks;
 using DemokratiskDialog.Data;
 using DemokratiskDialog.Models;
 using DemokratiskDialog.Options;
@@ -10,13 +9,13 @@ using DemokratiskDialog.Services;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.HttpsPolicy;
-using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Identity.UI;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Infrastructure;
+using Microsoft.AspNetCore.Mvc.Routing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Newtonsoft.Json;
 using NodaTime;
 using Polly;
 
@@ -24,37 +23,51 @@ namespace DemokratiskDialog
 {
     public class Startup
     {
-        public Startup(IConfiguration configuration)
+        public Startup(IConfiguration configuration, IHostingEnvironment environment)
         {
             Configuration = configuration;
+            Environment = environment;
         }
 
-        public IConfiguration Configuration { get; }
+        public readonly IConfiguration Configuration;
+        private readonly IHostingEnvironment Environment;
 
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
-            services.Configure<CookiePolicyOptions>(options =>
-            {
-                // This lambda determines whether user consent for non-essential cookies is needed for a given request.
-                options.CheckConsentNeeded = context => true;
-                options.MinimumSameSitePolicy = SameSiteMode.None;
-            });
-
             services.AddDbContextPool<ApplicationDbContext>(options =>
                 options.UseSqlServer(
                     Configuration.GetConnectionString("DefaultConnection")));
 
-            services.AddDefaultIdentity<IdentityUser>()
+            services.AddDefaultIdentity<ApplicationUser>()
                 .AddEntityFrameworkStores<ApplicationDbContext>();
 
             services.AddAuthentication().AddTwitter(twitterOptions =>
             {
                 twitterOptions.ConsumerKey = Configuration["Twitter:ConsumerKey"];
                 twitterOptions.ConsumerSecret = Configuration["Twitter:ConsumerSecret"];
+                twitterOptions.SaveTokens = true;
             });
 
-            services.AddMvc().SetCompatibilityVersion(CompatibilityVersion.Version_2_2);
+            services.AddMvc()
+                .AddRazorPagesOptions(options =>
+                {
+                    options.Conventions.AddAreaPageRoute("Identity", "/Account/Login", "/login");
+                    options.Conventions.AddAreaPageRoute("Identity", "/Account/Logout", "/logout");
+                    options.Conventions.AddAreaPageRoute("Identity", "/Account/ExternalLogin", "/external-login");
+                    options.Conventions.AddAreaPageRoute("Identity", "/Account/AccessDenied", "/access-denied");
+                    options.Conventions.AddAreaPageRoute("Identity", "/Account/Lockout", "/lockout");
+
+                    options.Conventions.AddAreaPageRoute("Identity", "/Account/Manage/Index", "/profile");
+                    options.Conventions.AddAreaPageRoute("Identity", "/Account/Manage/ExternalLogins", "/profile/external-logins");
+                    options.Conventions.AddAreaPageRoute("Identity", "/Account/Manage/Blocks", "/profile/blocks");
+                    options.Conventions.AddAreaPageRoute("Identity", "/Account/Manage/PersonalData", "/profile/personal-data");
+                    options.Conventions.AddAreaPageRoute("Identity", "/Account/Manage/DownloadPersonalData", "/profile/personal-data/download");
+                    options.Conventions.AddAreaPageRoute("Identity", "/Account/Manage/DeletePersonalData", "/profile/personal-data/delete");
+                })
+                .SetCompatibilityVersion(CompatibilityVersion.Version_2_2);
+            
+            services.AddDataProtection();
 
             services.AddSingleton<IBackgroundQueue<CheckBlockedJob>>(new CheckBlockedJobQueue(50));
             services.AddTransient<IBackgroundJobProcessor<CheckBlockedJob>, CheckBlockedJobProcessor>();
@@ -70,11 +83,15 @@ namespace DemokratiskDialog
                     TimeSpan.FromSeconds(8)
                 }));
             services.AddScoped<TwitterService>();
-            services.AddSingleton<UserTimelineRateLimiter>();
+            services.AddSingleton<TwitterRateLimits>();
             services.AddScoped<EmailService>();
 
             services.Configure<TwitterApiOptions>(Configuration.GetSection("Twitter"));
             services.Configure<EmailServiceOptions>(Configuration.GetSection("EmailService"));
+            
+            var twitterHandles = new UsersToCheck(File.ReadAllLines(Path.Combine(Environment.ContentRootPath, "influencers.csv"))
+                .Select(JsonConvert.DeserializeObject<Influencer>));
+            services.AddSingleton(twitterHandles);
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.

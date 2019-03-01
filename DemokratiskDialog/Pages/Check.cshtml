@@ -1,0 +1,17 @@
+﻿@page "/check"
+@model DemokratiskDialog.Pages.CheckModel
+@{
+    ViewData["Title"] = "Gennemfør blokeringskontrol";
+}
+
+<h1>@ViewData["Title"]</h1>
+
+<partial name="_LatestJobState" model="Model.LatestJob" />
+@if (Model.CanSubmit)
+{
+<partial name="_CheckSubmissionPartial" model="Model.Input" />
+}
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

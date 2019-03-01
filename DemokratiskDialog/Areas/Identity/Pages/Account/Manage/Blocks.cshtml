@@ -1,0 +1,43 @@
+﻿@page
+@model BlocksModel
+@{
+    ViewData["Title"] = "Blokeringer";
+    ViewData["ActivePage"] = ManageNavPages.Blocks;
+}
+
+<style>
+    .title {
+        color: black;
+        /*padding: .25em;*/
+        /*font-size: 1.25em;*/
+        font-weight: bold;
+        background-color: rgba(255,255,255,.6);
+        text-align: center;
+    }
+</style>
+
+<h4>@ViewData["Title"]</h4>
+
+<div class="text-info">
+    <p>
+        Nedenfor finder du en liste over alle de blokeringer, vi har registreret om dig, samt hvornår vi udførte kontrollen af den givne blokering.<br />
+        Husk på, at en komplet kontrol af alle ~5.000 profiler tager ca. 1½ time, så hvis du for nyligt har sat en kontrol igang, er det muligt, at ikke alle optræder på listen endnu.
+    </p>
+</div>
+
+<partial name="_LatestJobState" model="Model.LatestJob" />
+
+<div class="row">
+    @foreach (var blocker in Model.Blocks)
+    {
+        <div class="col-12 col-sm-6 col-md-4 col-lg-3">
+            <a href="https://twitter.com/@blocker.Handle" title="@blocker.Handle" target="_blank" rel="noopener">
+                <img src="@blocker.ProfilePictureUrl.Replace("_normal", "_400x400")" class="img-fluid" />
+                <div class="title">
+                    @@@blocker.Handle<br />
+                    <small class="text-muted">Sidst kontrolleret<br />@blocker.Checked.ToDanishTime()</small>
+                </div>
+            </a>
+        </div>
+    }
+</div>

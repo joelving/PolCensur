@@ -8,7 +8,7 @@
 <div class="row">
     <div class="col-md-6 offset-md-3">
         <section>
-            <h1>@ViewData["Title"]</h1>
+            <h1 class="display-4 text-center">@ViewData["Title"]</h1>
             <hr />
             @{
                 if ((Model.ExternalLogins?.Count ?? 0) == 0)
@@ -20,12 +20,8 @@
                 }
                 else
                 {
-                    <form id="external-account" asp-page="./ExternalLogin" asp-route-returnUrl="@Model.ReturnUrl" method="post" class="form-horizontal">
+                    <form id="external-account" asp-page="/Account/ExternalLogin" asp-route-returnUrl="@Model.ReturnUrl" method="post" class="form-horizontal">
                         <div>
-                            <p>For at benytte tjenesten, skal du give den tilladelse til at tilgå Twitter på dine vegne.</p>
-                            <p>Ved at give os læseadgang til din Twitter-konto, kan vi se om brugere har blokeret dig, ved at forsøge at hente deres tidslinje - ligesom hvis du havde gjort det selv.</p>
-                            <p>Vi bruger kun adgangen til lige netop dette tjek, og du kan altid tilbagekalde adgangen hos Twitter ved at gå til <a href="https://twitter.com/settings/sessions">https://twitter.com/settings/sessions</a>.</p>
-                            <p>Du kan læse meget mere om, hvordan vi håndterer dine data under vores <a asp-route="privacy-policy">privatlivspolitik</a>.</p>
                             <p class="text-center">
                                 @foreach (var provider in Model.ExternalLogins)
                                 {

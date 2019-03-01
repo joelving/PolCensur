@@ -1,0 +1,15 @@
+﻿@page
+@model DemokratiskDialog.Pages.HandlesModel
+@{
+    ViewData["Title"] = "Handles";
+}
+
+<h1>Handles</h1>
+
+<table>
+    <tr><th>Navn</th><th>Score</th><th>Følgere</th><th>Tweets</th></tr>
+    @foreach (var profile in Model.Profiles)
+    {
+    <tr><th>@profile.User.ScreenName</th><th>@profile.Score</th><th>@profile.User.FollowersCount</th><th>@profile.User.StatusesCount</th></tr>
+    }
+</table>
