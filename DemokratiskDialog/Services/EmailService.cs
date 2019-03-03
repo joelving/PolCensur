@@ -15,7 +15,7 @@ namespace DemokratiskDialog.Services
 
         public EmailServiceOptions Options { get; } //set only via Secret Manager
 
-        public Task SendEmailAsync(string email, string subject, string message)
+        public Task<Response> SendEmailAsync(string email, string subject, string message)
         {
             var client = new SendGridClient(Options.SendGridKey);
             var msg = new SendGridMessage()

@@ -1,4 +1,5 @@
 ﻿@page
+@inject UsersToCheck influencers
 @model BlocksModel
 @{
     ViewData["Title"] = "Blokeringer";
@@ -21,7 +22,7 @@
 <div class="text-info">
     <p>
         Nedenfor finder du en liste over alle de blokeringer, vi har registreret om dig, samt hvornår vi udførte kontrollen af den givne blokering.<br />
-        Husk på, at en komplet kontrol af alle ~5.000 profiler tager ca. 1½ time, så hvis du for nyligt har sat en kontrol igang, er det muligt, at ikke alle optræder på listen endnu.
+        Husk på, at en komplet kontrol af alle @influencers.Count profiler tager lidt tid, så hvis du for nyligt har sat en kontrol igang, er det muligt, at ikke alle optræder på listen endnu.
     </p>
 </div>
 

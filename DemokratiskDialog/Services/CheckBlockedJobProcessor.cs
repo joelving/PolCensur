@@ -53,6 +53,102 @@ namespace DemokratiskDialog.Services
                 var existing = await _dbContext.Blocks.Where(b => b.UserId == job.CheckingForUserId).ToDictionaryAsync(b => b.BlockedByTwitterId, b => b);
 
                 var blocks = new List<string>();
+                int offset = 0, batchSize = 100;
+                while (offset < _usersToCheck.Count)
+                {
+                    var batch = _usersToCheck.Skip(offset).Take(batchSize);
+                    var profiles = await _twitterService.LookupByScreenNamesAsUser(job.CheckingForUserId, job.AccessToken, job.AccessTokenSecret, batch.Select(i => i.Profile.ScreenName), cancellationToken);
+                    var candidates = profiles.Where(p => p.Status is null);
+
+                    foreach (var userToCheck in candidates)
+                    {
+
+                        var twitterId = userToCheck.IdStr;
+                        var screenName = userToCheck.ScreenName;
+                        cancellationToken.ThrowIfCancellationRequested();
+                        if (twitterId == job.CheckingForTwitterId) continue;
+
+                        var isBlocked = await _twitterService.IsBlocked(job.CheckingForUserId, job.AccessToken, job.AccessTokenSecret, twitterId, cancellationToken);
+                        _logger.LogInformation($"User {job.CheckingForTwitterId} {(isBlocked ? "IS" : "is NOT")} by user '{screenName}' (Id {twitterId}).");
+
+                        if (isBlocked)
+                        {
+                            blocks.Add(twitterId);
+                            if (existing.ContainsKey(twitterId))
+                            {
+                                existing[twitterId].Checked = _clock.GetCurrentInstant();
+                            }
+                            else
+                            {
+                                var newBlock = new Block
+                                {
+                                    UserId = job.CheckingForUserId,
+                                    BlockedByTwitterId = twitterId,
+                                    Checked = _clock.GetCurrentInstant()
+                                };
+                                _dbContext.Blocks.Add(newBlock);
+                            }
+                            await _dbContext.SaveChangesAsync(cancellationToken);
+
+                        }
+                    }
+                    offset += batchSize;
+                }
+
+                var removed = existing.Where(e => !blocks.Any(b => b == e.Key)).Select(e => e.Value);
+                if (removed.Any())
+                {
+                    _dbContext.Blocks.RemoveRange(removed);
+                    await _dbContext.SaveChangesAsync(cancellationToken);
+                }
+
+                var (subject, body) = EmailTemplates.Completed(job.CheckingForScreenName, "https://polcensur.dk/profile/blocks");
+                await _emailService.SendEmailAsync(job.Email, subject, body);
+                await MarkSuccessful(job);
+            }
+            catch (TwitterUnauthorizedException tuex)
+            {
+                // We cannot possibly continue. Abort and notify user to reauthorize.
+                _logger.LogError(tuex, $"Authentication error occurred trying to check blocks of '{job.CheckingForUserId}'.");
+                await _dbContext.LogException(job.Id.ToString(), "CheckBlockedJob", tuex, _clock);
+
+                var (subject, body) = EmailTemplates.UnauthorizedError(job.CheckingForScreenName, "https://polcensur.dk/login");
+                await _emailService.SendEmailAsync(job.Email, subject, body);
+                await MarkFailed(job);
+            }
+            catch (OperationCanceledException cex)
+            {
+                await _dbContext.LogException(job.Id.ToString(), "CheckBlockedJob", cex, _clock);
+                _logger.LogWarning($"Check blocks of '{job.CheckingForUserId}' was cancelled.");
+                await MarkFailed(job);
+            }
+            catch (Exception ex)
+            {
+                await _dbContext.LogException(job.Id.ToString(), "CheckBlockedJob", ex, _clock);
+                _logger.LogError(ex, $"Exception occurred trying to check blocks of '{job.CheckingForUserId}'.");
+                var (subject, body) = EmailTemplates.Failed(job.CheckingForScreenName, "https://polcensur.dk");
+                await _emailService.SendEmailAsync(job.Email, subject, body);
+                await MarkFailed(job);
+            }
+            finally
+            {
+                // Release our queue semaphore allowing an additional item to be processed.
+                callback();
+            }
+        }
+
+        public async Task ProcessJobOld((CheckBlockedJob job, Action callback) data, CancellationToken cancellationToken)
+        {
+            var (job, callback) = data;
+            _dbContext.Jobs.Attach(job);
+            await MarkRunning(job);
+            try
+            {
+                _logger.LogInformation($"Beginning to check blocks for user with local Id {job.CheckingForUserId} and Twitter Id '{job.CheckingForTwitterId}'.");
+
+                var existing = await _dbContext.Blocks.Where(b => b.UserId == job.CheckingForUserId).ToDictionaryAsync(b => b.BlockedByTwitterId, b => b);
+
+                var blocks = new List<string>();
                 foreach (var userToCheck in _usersToCheck)
                 {
                     var twitterId = userToCheck.Profile.IdStr;

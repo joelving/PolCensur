@@ -49,7 +49,13 @@ namespace DemokratiskDialog.Services
             var userAccessToken = protector.Unprotect(protectedUserAccessToken);
             var userAccessTokenSecret = protector.Unprotect(protectedUserAccessTokenSecret);
 
-            var response = await SendRequestAsUser(_options, userAccessToken, userAccessTokenSecret, HttpMethod.Get, $"{_twitterApiBaseUrl}/statuses/user_timeline.json?user_id={userId}&count=1", cancellationToken);
+            var response = await SendRequestAsUser(
+                _options,
+                userAccessToken,
+                userAccessTokenSecret,
+                HttpMethod.Get, $"{_twitterApiBaseUrl}/statuses/user_timeline.json?user_id={userId}&count=1",
+                cancellationToken: cancellationToken
+            );
 
             if (response.StatusCode != System.Net.HttpStatusCode.Unauthorized)
                 return false;
@@ -100,6 +106,44 @@ namespace DemokratiskDialog.Services
             return JsonConvert.DeserializeObject<TwitterUser[]>(await response.Content.ReadAsStringAsync());
         }
 
+        public async Task<TwitterUser[]> LookupByScreenNamesAsUser(string checkingForUserId, string protectedUserAccessToken, string protectedUserAccessTokenSecret, IEnumerable<string> batch, CancellationToken cancellationToken = default)
+        {
+            await _rateLimits.User.Lookup.WaitToProceed(checkingForUserId, cancellationToken);
+
+            var protector = _protectionProvider.CreateProtector(checkingForUserId);
+            var userAccessToken = protector.Unprotect(protectedUserAccessToken);
+            var userAccessTokenSecret = protector.Unprotect(protectedUserAccessTokenSecret);
+
+            var response = await SendRequestAsUser(
+                _options,
+                userAccessToken,
+                userAccessTokenSecret,
+                HttpMethod.Get,
+                $"{_twitterApiBaseUrl}/users/lookup.json?screen_name={string.Join(",", batch)}",
+                cancellationToken: cancellationToken
+            );
+
+            response.EnsureSuccessStatusCode();
+
+            return JsonConvert.DeserializeObject<TwitterUser[]>(await response.Content.ReadAsStringAsync());
+        }
+
+        public async Task AddProfilesToList(string userAccessToken, string userAccessTokenSecret, string owner, string slug, IEnumerable<string> batch, CancellationToken cancellationToken)
+        {
+            await _rateLimits.User.List.WaitToProceed(owner, cancellationToken);
+
+            var response = await SendRequestAsUser(
+                _options,
+                userAccessToken,
+                userAccessTokenSecret,
+                HttpMethod.Get,
+                $"{_twitterApiBaseUrl}/users/lookup.json?screen_name={string.Join(",", batch)}",
+                cancellationToken: cancellationToken
+            );
+
+            response.EnsureSuccessStatusCode();
+        }
+
         public async Task<TwitterUser[]> ListMembers(string ownerScreenName, string slug, CancellationToken cancellationToken = default)
         {
             await _rateLimits.App.ListMembers.WaitToProceed();
@@ -132,7 +176,7 @@ namespace DemokratiskDialog.Services
             return JsonConvert.DeserializeObject<TwitterUser>(await response.Content.ReadAsStringAsync());
         }
 
-        private async Task<HttpResponseMessage> SendRequestAsUser(TwitterApiOptions options, string userAccessToken, string userAccessTokenSecret, HttpMethod method, string url, CancellationToken cancellationToken = default)
+        private async Task<HttpResponseMessage> SendRequestAsUser(TwitterApiOptions options, string userAccessToken, string userAccessTokenSecret, HttpMethod method, string url, IEnumerable<KeyValuePair<string, string>> payload = null, CancellationToken cancellationToken = default)
         {
             var authClient = new OAuthRequest
             {
@@ -149,8 +193,11 @@ namespace DemokratiskDialog.Services
             };
             var authHeader = authClient.GetAuthorizationHeader().Substring(6);
             _httpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("OAuth", authHeader);
+            var message = new HttpRequestMessage { Method = method, RequestUri = new Uri(url) };
+            if (payload != null)
+                message.Content = new FormUrlEncodedContent(payload);
 
-            return await _httpClient.SendAsync(new HttpRequestMessage { Method = method, RequestUri = new Uri(url) }, cancellationToken);
+            return await _httpClient.SendAsync(message, cancellationToken);
         }
 
         private async Task<HttpResponseMessage> SendRequestAsApp(TwitterApiOptions options, HttpMethod method, string url, IEnumerable<KeyValuePair<string, string>> payload = null, CancellationToken cancellationToken = default)

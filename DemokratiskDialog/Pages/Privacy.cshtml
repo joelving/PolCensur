@@ -1,4 +1,5 @@
 ﻿@page "/privacy"
+@inject UsersToCheck influencers
 @model DemokratiskDialog.Pages.PrivacyModel
 
 @{
@@ -12,7 +13,7 @@
     For at tjenesten kan fungere, indsamler vi:
     <ul>
         <li>Dit Twitter Id og brugernavn og en midlertidig adgangsnøgle: Disse er nødvendige for at kunne kontrollere hvem, der har blokeret dig.</li>
-        <li>En liste over hvilke af de ~5.000 mest magtfulde Twitter-profiler, der har blokeret dig: Det er pointen med tjenesten - ønsker du ikke dette, er der ingen grund til at være her.</li>
+        <li>En liste over hvilke af de @influencers.Count mest magtfulde Twitter-profiler, der har blokeret dig: Det er pointen med tjenesten - ønsker du ikke dette, er der ingen grund til at være her.</li>
         <li>Eventuelt en emailadresse: Hver gang du beder os kontrollere dine blokeringer, beder vi dig om en emailadresse. Den bruger vi til at give dig besked, når kontrollen er foretaget. Det er helt frivilligt, om du vil oplyse os din emailadresse. Angiver du ikke din emailadresse, må du selv løbende holde øje med siden, for at se, om kontrollen er færdig.</li>
     </ul>
 </p>

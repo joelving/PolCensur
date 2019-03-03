@@ -34,7 +34,7 @@ namespace DemokratiskDialog.Pages
         public IActionResult OnGet()
         {
             if (!_environment.IsDevelopment())
-                return Forbid();
+                return NotFound();
 
             var profiles = System.IO.File.ReadAllLines(Path.Combine(_environment.ContentRootPath, "twitter-handles-ids.csv")).Select(JsonConvert.DeserializeObject<TwitterUser>);
             Profiles = profiles.Select(p => new ScoredTwitterUser
@@ -52,7 +52,7 @@ namespace DemokratiskDialog.Pages
         public async Task<IActionResult> OnPostAsync()
         {
             if (!_environment.IsDevelopment())
-                return Forbid();
+                return NotFound();
 
             var handles = System.IO.File.ReadAllLines(Path.Combine(_environment.ContentRootPath, "twitter-handles.csv"));
             var count = handles.Count();

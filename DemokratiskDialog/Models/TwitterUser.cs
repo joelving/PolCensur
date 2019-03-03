@@ -67,5 +67,8 @@ namespace DemokratiskDialog.Models
 
         [JsonProperty("default_profile_image")]
         public bool DefaultProfileImage { get; set; }
+
+        [JsonProperty("status")]
+        public object Status { get; set; }
     }
 }

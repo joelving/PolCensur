@@ -1,0 +1,71 @@
+﻿@page
+@model DemokratiskDialog.Pages.SyncModel
+@{
+    ViewData["Title"] = "Sync";
+}
+
+<h1>Sync</h1>
+
+<div class="row">
+    <div class="col">
+        <form asp-page-handler="SyncInternal" method="post">
+            <button type="submit">Synkroniser interne</button>
+        </form>
+    </div>
+    <div class="col">
+        <form asp-page-handler="SyncExternal" method="post">
+            <button type="submit">Synkroniser eksterne</button>
+        </form>
+    </div>
+</div>
+
+@foreach (var list in Model.Lists)
+{
+    <div class="row">
+        <div class="col">
+            <h2>@list.Slug</h2>
+            <p>
+
+            </p>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-6">
+            <h3>Intern</h3>
+            <p>
+                Antal medlemmer: @list.InternalCount<br />
+                Sidst synkroniseret: @list.LastSyncedInternal?.ToDanishTime()
+            </p>
+            <h4>Overskydende medlemmer:</h4>
+            @foreach (var user in list.AdditionalUsers)
+            {
+                <div>@user.Name</div>
+            }
+        </div>
+
+        <div class="col-6">
+            <h3>Ekstern</h3>
+            <p>
+                Antal medlemmer: @list.ExternalCount<br />
+                Sidst synkroniseret: @list.LastSyncedExternal?.ToDanishTime()
+            </p>
+            <h4>Manglende medlemmer:</h4>
+            @foreach (var user in list.MissingUsers)
+            {
+                <div>@user.Name</div>
+            }
+
+            @if (list.MissingUsers.Count > 0)
+            {
+            <form asp-page-handler="AddMissingUsers" asp-route-slug="@list.Slug" method="post">
+                <button type="submit">Synkroniser eksterne</button>
+            </form>
+            }
+        </div>
+    </div>
+    <div class="row">
+        <div class="col">
+            <hr />
+        </div>
+    </div>
+}

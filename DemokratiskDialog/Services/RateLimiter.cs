@@ -13,6 +13,8 @@ namespace DemokratiskDialog.Services
         public class UserRateLimits
         {
             public RateLimiter Timeline { get; } = new RateLimiter(900, TimeSpan.FromMinutes(15));
+            public RateLimiter Lookup { get; } = new RateLimiter(900, TimeSpan.FromMinutes(15));
+            public RateLimiter List { get; } = new RateLimiter(900, TimeSpan.FromMinutes(15));
         }
 
         public AppRateLimits App { get; } = new AppRateLimits();

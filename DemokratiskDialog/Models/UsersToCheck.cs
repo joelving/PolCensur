@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.ComponentModel;
 
 namespace DemokratiskDialog.Models
 {
@@ -16,13 +17,28 @@ namespace DemokratiskDialog.Models
 
     public enum UserCategory
     {
+        [Description("Uspecificerede")]
         Unspecified,
+
+        [Description("Politikere")]
         Politician,
+
+        [Description("Kommunikationsfolk")]
         Spin,
+
+        [Description("Journalister")]
         Journalist,
+
+        [Description("Interesseorganisationer")]
         Lobby,
+
+        [Description("Erhvervsliv")]
         Business,
+
+        [Description("Fagforeningsfolk")]
         Union,
+
+        [Description("Myndighedspersoner")]
         Public
     }
 }

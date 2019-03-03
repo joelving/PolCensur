@@ -5,19 +5,14 @@
 }
 
 <style>
-    .blocked-profiles {
-        display: flex;
-    }
-    .blocked-profile {
-        margin-right: .25em;
-        max-width: 12.5%
-    }
     .blocking-profile {
         position: relative;
     }
+
     .blocking-profile img {
         width: 100%;
     }
+
     .blocking-profile .title {
         position: absolute;
         bottom: 0;
@@ -30,7 +25,33 @@
         background-color: rgba(255,255,255,.6);
         text-align: center;
     }
+
+    .blocked-profile {
+        padding-left: 5px;
+        padding-right: 5px;
+    }
+    .blocked-profile a {
+        width: 100%;
+    }
+    .blocked-profile a img {
+        width: 100%;
+    }
+
+    @@media (min-width: 576px) {
+        .card {
+            max-width: 50%;
+            min-width: 30%;
+        }
+    }
+
+    @@media (min-width: 992px) {
+        .card {
+            max-width: 50%;
+            min-width: 30%;
+        }
+    }
 </style>
+
 
 <div class="jumbotron-fluid">
     <div class="container">
@@ -48,37 +69,36 @@
 </div>
 
 
-<h2 class="text-center mt-5">Top 10 flittigste* blockere</h2>
+<h2 class="text-center mt-5">Top 9 flittigste* blockere</h2>
 <p class="text-muted text-center"><small>Baseret på kontrol af @Model.UsersChecked @(Model.UsersChecked == 1 ? "brugers" : "brugeres") Twitter-blokeringer.</small></p>
-@foreach (var blocker in Model.Blockers)
-{
-<div class="row mb-5 align-items-end">
-    <div class="col-12 col-sm-4 blocking-profile">
-        <a href="https://twitter.com/@blocker.Handle" title="@blocker.Handle" target="_blank" rel="noopener">
-            <img src="@blocker.ImageUrl.Replace("_normal", "_400x400")" />
-            <div class="title">
-                @@@blocker.Handle<br />
-                I alt @blocker.BlockCount @(blocker.BlockCount == 1 ? "blokering" : "blokeringer")
+
+<div class="card-deck">
+    @foreach (var blocker in Model.Blockers)
+    {
+        <div class="card mb-4">
+            <img src="@blocker.ImageUrl.Replace("_normal", "_400x400")" class="card-img-top" alt="...">
+            <div class="card-body">
+                <h5 class="card-title">@@@blocker.Handle</h5>
+                <div class="container">
+                    <div class="row">
+                        @foreach (var blocked in blocker.BlockedProfiles)
+                        {
+                            <div class="col-4 blocked-profile">
+                                <a class="" href="https://twitter.com/@blocked.Handle" title="@blocked.Handle" target="_blank" rel="noopener">
+                                    <img src="@blocked.ProfilePictureUrl.Replace("_normal", "_bigger")" class="img-fluid" />
+                                </a>
+                            </div>
+                        }
+                    </div>
+                </div>
             </div>
-        </a>
-    </div>
-    <div class="d-none d-sm-block col-sm-8">
-        <div class="blocked-profiles">
-            @foreach (var blocked in blocker.BlockedProfiles)
-            {
-                <div class="blocked-profile"><a href="https://twitter.com/@blocked.Handle" title="@blocked.Handle" target="_blank" rel="noopener"><img src="@blocked.ProfilePictureUrl.Replace("_normal", "_bigger")" class="img-fluid" /></a></div>
-            }
+            <div class="card-footer">
+                <small class="text-muted">I alt @blocker.BlockCount @(blocker.BlockCount == 1 ? "blokering" : "blokeringer")</small>
+            </div>
         </div>
-    </div>
-    <div class="col-12 col-md-2 d-none d-sm-block">
-        @if (blocker.BlockCount > blocker.BlockedProfiles.Count)
-        {
-            var more = blocker.BlockCount - blocker.BlockedProfiles.Count;
-            <span>Samt<span class="badge badge-secondary m-1">@more</span> @(more == 1 ? "anden" : "andre")</span>
-        }
-    </div>
+    }
 </div>
-}
+
 
 <div id="check">
     <partial name="_LatestJobState" model="Model.LatestJob" />

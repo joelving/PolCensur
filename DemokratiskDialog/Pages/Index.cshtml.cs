@@ -80,7 +80,7 @@ namespace DemokratiskDialog.Pages
             Blockers = new List<Blocker>();
 
             var blockCounts = await _dbContext.BlockCounts.FromSql(
-                @"SELECT TOP 10
+                @"SELECT TOP 9
                 BlockedByTwitterId, COUNT(*) AS Count
                 FROM Blocks
                 GROUP BY BlockedByTwitterId
@@ -89,7 +89,7 @@ namespace DemokratiskDialog.Pages
             foreach (var blockCount in blockCounts)
             {
                 var userBlocks = await _dbContext.UserBlocks.FromSql(
-                    @"SELECT TOP 10
+                    @"SELECT TOP 9
                     l.ProviderKey AS TwitterId, u.UserName AS Handle, u.ProfilePictureUrl, b.BlockedByTwitterId
                     FROM Blocks b
                     INNER JOIN AspNetUsers u ON u.Id = b.UserId
