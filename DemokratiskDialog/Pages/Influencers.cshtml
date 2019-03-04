@@ -20,7 +20,7 @@
     {
     <div class="card">
         <h2>@group.Key.Description() (i alt @group.Count())</h2>
-        @foreach (var profile in group)
+        @foreach (var profile in group.OrderBy(p => p.Profile.Name))
         {
         <div>@profile.Profile.Name <small>(<a href="https://twitter.com/@profile.Profile.ScreenName" title="Besøg @profile.Profile.Name's Twitter-profil" target="_blank" rel="noopener">@@@profile.Profile.ScreenName</a>)</small></div>
         }
