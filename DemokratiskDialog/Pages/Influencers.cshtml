@@ -7,7 +7,7 @@
 
 <h1 class="display-4">@ViewData["Title"]</h1>
 
-<p class="lead">Vi kontrollerer pt. @influencers.Count forskellige indflydelsesrige Twitter-profiler. Nedenfor finder du en oversigt fordelt på forskellige kategorier.</p>
+<p class="lead">Vi kontrollerer pt. @influencers.All.Count() forskellige indflydelsesrige Twitter-profiler. Nedenfor finder du en oversigt fordelt på forskellige kategorier.</p>
 
 <style>
     .card {
@@ -16,13 +16,13 @@
 </style>
 
 <div class="card-columns">
-    @foreach (var group in influencers.GroupBy(i => i.Category))
+    @foreach (var group in influencers)
     {
     <div class="card">
-        <h2>@group.Key.Description() (i alt @group.Count())</h2>
-        @foreach (var profile in group.OrderBy(p => p.Profile.Name))
+        <h2>@group.Key.Description() (i alt @group.Value.Count())</h2>
+        @foreach (var profile in group.Value.OrderBy(p => p.Name))
         {
-        <div>@profile.Profile.Name <small>(<a href="https://twitter.com/@profile.Profile.ScreenName" title="Besøg @profile.Profile.Name's Twitter-profil" target="_blank" rel="noopener">@@@profile.Profile.ScreenName</a>)</small></div>
+        <div>@profile.Name <small>(<a href="https://twitter.com/@profile.ScreenName" title="Besøg @profile.Name's Twitter-profil" target="_blank" rel="noopener">@@@profile.ScreenName</a>)</small></div>
         }
     </div>
     }

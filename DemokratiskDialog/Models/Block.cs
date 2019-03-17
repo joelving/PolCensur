@@ -11,6 +11,8 @@ namespace DemokratiskDialog.Models
         public ApplicationUser User { get; set; }
 
         public string BlockedByTwitterId { get; set; }
+
+        public Instant FirstSeen { get; set; }
         public Instant Checked { get; set; }
     }
 }

@@ -1,6 +1,10 @@
 ﻿@model CheckBlockedJob
 @inject IClock _clock
 
+@{ 
+    var disableLink = ViewData.ContainsKey("DisableLink") && (bool)ViewData["DisableLink"];
+}
+
 @if (!(Model is null))
 {
     if (Model.State == CheckBlockedJob.CheckBlockedJobState.Pending)
@@ -12,11 +16,11 @@
     }
     else if (Model.State == CheckBlockedJob.CheckBlockedJobState.Running)
     {
-        if (_clock.GetCurrentInstant().Minus(Model.LastUpdate) > Duration.FromHours(2))
+        if (Model.IsStale(_clock))
         {
             <div class="alert alert-warning">
                 Din kontrol er sat igang, men ser ud til at være usædvanlig lang tid om at blive færdig.<br />
-                Kontrollen blev igangsat @Model.LastUpdate.<br />
+                Kontrollen blev igangsat @Model.LastUpdate.ToDanishTime().<br />
                 Du kan enten væbne dig med tålmodighed eller forsøge at igangsætte en ny.
             </div>
         }
@@ -29,11 +33,14 @@
     else if (Model.State == CheckBlockedJob.CheckBlockedJobState.Completed)
     {
         <div class="alert alert-success">
-            Din kontrol er gennemført, og du kan se resultatet under <a asp-area="Identity" asp-page="/Account/Manage/Blocks" title="Dine blokeringer">dine blokeringer</a>.
+            Din kontrol er gennemført!
+            @if (!disableLink) {
+                <text>Du kan se resultatet under <a asp-area="Identity" asp-page="/Account/Manage/Blocks" title="Dine blokeringer">dine blokeringer</a>.</text>
+            }
         </div>
     }
-    else if (Model.State == CheckBlockedJob.CheckBlockedJobState.Failed)
-    {
+            else if (Model.State == CheckBlockedJob.CheckBlockedJobState.Failed)
+            {
         <div class="alert alert-info">
             Din kontrol fejlede under udførslen. Det kan enten skylde en teknisk fejl fra vores side - det beklager vi! - eller at tilladelse til at tilgå din Twitter-konto er blevet trukket tilbage.<br />
             I alle tilfælde må du meget gerne forsøge igen - og kontakte os på <a href="mailto:support@polcensur.dk" title="Skriv til supporten">support@polcensur.dk</a>, hvis det fortsætter.

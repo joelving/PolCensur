@@ -8,11 +8,11 @@
 
 <p>I alt @Model.Profiles.Count profiler</p>
 
-@foreach (var group in Model.Profiles.GroupBy(p => p.Category))
+@foreach (var group in Model.Profiles)
 {
-    <h2>@group.Key (i alt @group.Count())</h2>
-    foreach (var profile in group)
+    <h2>@group.Key (i alt @group.Value.Count())</h2>
+    foreach (var profile in group.Value)
     {
-        <div>@profile.Profile.IdStr:    @profile.Profile.ScreenName</div>
+        <div>@profile.IdStr:    @profile.ScreenName</div>
     }
 }

@@ -18,8 +18,7 @@ using NodaTime;
 
 namespace DemokratiskDialog.Pages
 {
-    //[Authorize]
-    public class SyncModel : PageModel
+    public class SyncModel : AdminPageModel
     {
         private readonly ApplicationDbContext _dbContext;
         private readonly ListsToCheck _listsToCheck;
@@ -56,9 +55,6 @@ namespace DemokratiskDialog.Pages
         }
 
         public List<ListData> Lists { get; set; } = new List<ListData>();
-
-        private bool IsAdmin()
-            => true ||User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Name)?.Value == "peter_joelving";
 
         public async Task<IActionResult> OnGet()
         {

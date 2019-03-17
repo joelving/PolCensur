@@ -22,23 +22,69 @@
 <div class="text-info">
     <p>
         Nedenfor finder du en liste over alle de blokeringer, vi har registreret om dig, samt hvornår vi udførte kontrollen af den givne blokering.<br />
-        Husk på, at en komplet kontrol af alle @influencers.Count profiler tager lidt tid, så hvis du for nyligt har sat en kontrol igang, er det muligt, at ikke alle optræder på listen endnu.
+        Husk på, at en kontrol kører når der er plads i systemet, så hvis du for nyligt har sat en kontrol igang, er det muligt, at ikke alle optræder på listen endnu.
     </p>
 </div>
+@{
+    var vd = new ViewDataDictionary(ViewData) { { "DisableLink", true } };
+}
+@if (!(Model.LatestJob is null))
+{
+    <partial name="_LatestJobState" model="Model.LatestJob" view-data="vd" />
+}
+@if (!(Model.LatestContinuousJob is null))
+{
+    <partial name="_LatestContinuousJobState" model="Model.LatestContinuousJob" view-data="vd" />
+}
 
-<partial name="_LatestJobState" model="Model.LatestJob" />
+@if (Model.Blocks.Any())
+{
+    <div class="row">
+        @foreach (var blocker in Model.Blocks)
+        {
+            <div class="col-12 col-sm-6 col-md-4 col-lg-3">
+                <a href="https://twitter.com/@blocker.Handle" title="@blocker.Handle" target="_blank" rel="noopener">
+                    <img src="@blocker.ProfilePictureUrl" class="img-fluid" />
+                    <div class="title">
+                        @@@blocker.Handle<br />
+                        <small class="text-muted">Først opdaget<br />@blocker.FirstSeen.ToDanishTime()</small><br />
+                        -<br />
+                        <small class="text-muted">Sidst kontrolleret<br />@blocker.Checked.ToDanishTime()</small>
+                    </div>
+                </a>
+            </div>
+        }
+    </div>
+}
+else if (Model.LatestJob?.State == CheckBlockedJob.CheckBlockedJobState.Completed || Model.LatestContinuousJob?.State == ContinuousCheckBlockedJob.JobState.Running || Model.LatestContinuousJob?.State == ContinuousCheckBlockedJob.JobState.Completed)
+{
+    <div class="jumbotron">
+        Imponerende! Du er tilsyneladende ikke blokeret af en eneste af de @influencers.All.Count() profiler, vi kontrollerer.
+    </div>
+}
 
-<div class="row">
-    @foreach (var blocker in Model.Blocks)
-    {
-        <div class="col-12 col-sm-6 col-md-4 col-lg-3">
-            <a href="https://twitter.com/@blocker.Handle" title="@blocker.Handle" target="_blank" rel="noopener">
-                <img src="@blocker.ProfilePictureUrl.Replace("_normal", "_400x400")" class="img-fluid" />
-                <div class="title">
-                    @@@blocker.Handle<br />
-                    <small class="text-muted">Sidst kontrolleret<br />@blocker.Checked.ToDanishTime()</small>
-                </div>
-            </a>
-        </div>
-    }
-</div>
+@if (Model.ArchivedBlocks.Any())
+{
+    <h5 class="mt-4">Tidligere blokeringer</h5>
+    <div class="row">
+        @foreach (var blockerGroup in Model.ArchivedBlocks.GroupBy(b => b.Handle))
+        {
+            foreach (var blocker in blockerGroup.OrderByDescending(b => b.VerifiedGone))
+            {
+            <div class="col-12 col-sm-6 col-md-4 col-lg-3">
+                <a href="https://twitter.com/@blocker.Handle" title="@blocker.Handle" target="_blank" rel="noopener">
+                    <img src="@blocker.ProfilePictureUrl" class="img-fluid" />
+                    <div class="title">
+                        @@@blocker.Handle<br />
+                        <small class="text-muted">Først opdaget<br />@blocker.FirstSeen.ToDanishTime()</small><br />
+                        -<br />
+                        <small class="text-muted">Sidst set<br />@blocker.Checked.ToDanishTime()</small><br />
+                        -<br />
+                        <small class="text-muted">Bekræftet ophævet<br />@blocker.VerifiedGone.ToDanishTime()</small>
+                    </div>
+                </a>
+            </div>
+            }
+        }
+    </div>
+}

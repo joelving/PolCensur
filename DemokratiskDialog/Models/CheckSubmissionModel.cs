@@ -8,5 +8,7 @@ namespace DemokratiskDialog.Models
         public string Email { get; set; }
 
         public bool Publicity { get; set; }
+
+        public bool Continuous { get; set; }
     }
 }

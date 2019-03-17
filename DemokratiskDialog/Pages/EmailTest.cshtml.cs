@@ -9,7 +9,7 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 
 namespace DemokratiskDialog.Pages
 {
-    public class EmailTestModel : PageModel
+    public class EmailTestModel : AdminPageModel
     {
         private readonly IHostingEnvironment _environment;
         private readonly EmailService _emailService;
@@ -22,7 +22,7 @@ namespace DemokratiskDialog.Pages
 
         public IActionResult OnGet()
         {
-            if (!_environment.IsDevelopment())
+            if (!IsAdmin())
                 return NotFound();
 
             return Page();

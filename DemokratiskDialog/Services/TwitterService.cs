@@ -160,6 +160,28 @@ namespace DemokratiskDialog.Services
             return JsonConvert.DeserializeObject<ListMembersResponse>(await response.Content.ReadAsStringAsync()).Users;
         }
 
+        public async Task<TwitterUser[]> ListMembersAsUser(string checkingForUserId, string protectedUserAccessToken, string protectedUserAccessTokenSecret, string ownerScreenName, string slug, CancellationToken cancellationToken = default)
+        {
+            await _rateLimits.User.List.WaitToProceed(checkingForUserId, cancellationToken);
+
+            var protector = _protectionProvider.CreateProtector(checkingForUserId);
+            var userAccessToken = protector.Unprotect(protectedUserAccessToken);
+            var userAccessTokenSecret = protector.Unprotect(protectedUserAccessTokenSecret);
+
+            var response = await SendRequestAsUser(
+                _options,
+                userAccessToken,
+                userAccessTokenSecret,
+                HttpMethod.Get,
+                $"{_twitterApiBaseUrl}/lists/members.json?owner_screen_name={ownerScreenName}&slug={slug}&count=5000&include_entities=0",
+                cancellationToken: cancellationToken
+            );
+
+            response.EnsureSuccessStatusCode();
+
+            return JsonConvert.DeserializeObject<ListMembersResponse>(await response.Content.ReadAsStringAsync()).Users;
+        }
+
         public async Task<TwitterUser> ShowByScreenName(string screenName, CancellationToken cancellationToken = default)
         {
             await _rateLimits.App.Lookup.WaitToProceed();

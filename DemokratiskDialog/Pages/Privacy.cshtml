@@ -20,22 +20,29 @@
 
 <h2>Sådan bruger vi dine data</h2>
 <p>
-    Dit Twitter Id er knyttet til blokeringerne, så vi kan genkende dig, når du besøger siden, og så vi kan sikre os, at vi ikke tæller blokeringer dobbelt.<br />
-    Din Twitter adgangsnøgle sletter vi igen, så snart kontrollen er færdig. Derfor vil du også opleve at blive sendt en tur omkring Twitter for at hente en ny adgangsnøgle hver gang, du beder om en ny kontrol.
-    Adgangsnøgle bliver aldrig skrevet til disk, men udelukkende holdt krypteret i RAM, hvor den kun dekrypteres, i det øjeblik den skal bruges.
-</p>
-<p>
     Vi bruger listen over profiler, der har blokeret dig til 1) at give dig oversigten over blokeringer og 2) at skabe overblik over i hvilket omfang magtfulde Twitter-brugere i Danmark blokerer andre.<br />
     På din profil kan du angive, om du ønsker din Twitter-profil offentliggjort i forbindelse med blokeringerne. <strong>Som udgangspunkt er du anonym og dine blokeringer indgår kun i aggregeret form.</strong>
     Er du eksempelvis blokeret af Lars Løkke Rasmussen vil man som udgangspunkt ikke kunne se det, men blot at Lars Løkke Rasmussen har blokeret en profil.<br />
     Under <a asp-area="identity" asp-page="/Account/Manage/Index" title="Gå til din profil">din profil</a> kan du vælge om din profil skal offentliggøres eller ej. Du kan altid fravælge offentliggørelse igen med øjeblikkelig virkning.
 </p>
+<p>
+    Dit Twitter Id er knyttet til blokeringerne, så vi kan genkende dig, når du besøger siden, og så vi kan sikre os, at vi ikke tæller blokeringer dobbelt.
+</p>
+<h3>Engangskontrol</h3>
+<p>
+    Din Twitter adgangsnøgle sletter vi igen, så snart kontrollen er færdig. Derfor vil du også opleve at blive sendt en tur omkring Twitter for at hente en ny adgangsnøgle hver gang, du beder om en ny kontrol.
+    Adgangsnøglen bliver aldrig skrevet til disk, men udelukkende holdt krypteret i RAM, hvor den kun dekrypteres, i det øjeblik den skal bruges.
+</p>
+<h3>Løbende kontrol</h3>
+<p>
+    For at kunne genoptage den løbende kontrol, når serveren ind imellem genstartes, er vi nødt til at gemme din adgangsnøgle i vores database - som dog er krypteret.<br />
+    Giver du os din emailadresse, så vi kan sende dig besked om ændringer, gemmes denne også i databasen.<br />
+    Både adgangsnøgle og emailadresse slettes igen, så snart du stopper den løbende kontrol.
+</p>
 
 <h2>Sådan administrerer du dine data</h2>
 <p>
     Under <a asp-area="identity" asp-page="/Account/Manage/PersonalData" title="Gå til dine persondata">dine persondata</a> kan du downloade de persondata, vi har om dig. Her kan du også slette al data, vi har lagret og samtidig slette din konto.
-    @*Sletter du din konto, beder vi dig tage stilling til, om vi må gemme dine blokeringer i anonymiseret form. Giver du os tilladelse til at gemme dem, overskriver vi dit Twitter Id med en hashet udgave af dit Twitter Id.
-        Dermed kan blokeringerne aldrig forbindes til din Twitter-konto, men vi kan genkende dem som dine, hvis du en dag vender tilbage til platformen.*@
 </p>
 
 <h2>Kontakt</h2>

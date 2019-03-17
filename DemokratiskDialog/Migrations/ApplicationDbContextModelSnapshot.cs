@@ -19,6 +19,28 @@ namespace DemokratiskDialog.Migrations
                 .HasAnnotation("Relational:MaxIdentifierLength", 128)
                 .HasAnnotation("SqlServer:ValueGenerationStrategy", SqlServerValueGenerationStrategy.IdentityColumn);
 
+            modelBuilder.Entity("DemokratiskDialog.Models.ArchivedBlock", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd();
+
+                    b.Property<string>("BlockedByTwitterId");
+
+                    b.Property<long>("Checked");
+
+                    b.Property<long>("FirstSeen");
+
+                    b.Property<string>("UserId");
+
+                    b.Property<long>("VerifiedGone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("ArchivedBlocks");
+                });
+
             modelBuilder.Entity("DemokratiskDialog.Models.Block", b =>
                 {
                     b.Property<Guid>("Id")
@@ -27,6 +49,8 @@ namespace DemokratiskDialog.Migrations
                     b.Property<string>("BlockedByTwitterId");
 
                     b.Property<long>("Checked");
+
+                    b.Property<long>("FirstSeen");
 
                     b.Property<string>("UserId");
 
@@ -55,6 +79,32 @@ namespace DemokratiskDialog.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Jobs");
+                });
+
+            modelBuilder.Entity("DemokratiskDialog.Models.ContinuousCheckBlockedJob", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd();
+
+                    b.Property<string>("AccessToken");
+
+                    b.Property<string>("AccessTokenSecret");
+
+                    b.Property<string>("CheckingForScreenName");
+
+                    b.Property<string>("CheckingForTwitterId");
+
+                    b.Property<string>("CheckingForUserId");
+
+                    b.Property<string>("Email");
+
+                    b.Property<long>("LastUpdate");
+
+                    b.Property<int>("State");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("ContinuousJobs");
                 });
 
             modelBuilder.Entity("DemokratiskDialog.Models.ExceptionLog", b =>
@@ -263,6 +313,13 @@ namespace DemokratiskDialog.Migrations
                     b.Property<bool>("ShowProfileWithBlocks");
 
                     b.HasDiscriminator().HasValue("ApplicationUser");
+                });
+
+            modelBuilder.Entity("DemokratiskDialog.Models.ArchivedBlock", b =>
+                {
+                    b.HasOne("DemokratiskDialog.Models.ApplicationUser", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId");
                 });
 
             modelBuilder.Entity("DemokratiskDialog.Models.Block", b =>

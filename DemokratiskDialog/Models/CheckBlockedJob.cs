@@ -33,5 +33,8 @@ namespace DemokratiskDialog.Models
             Completed,
             Failed
         }
+
+        public bool IsStale(IClock clock)
+            => clock.GetCurrentInstant().Minus(LastUpdate) > Duration.FromMinutes(30);
     }
 }

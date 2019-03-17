@@ -30,5 +30,14 @@
                 "Oplever du stadig fejlen, er du meget velkommen til at skrive til os på <a href=\"mailto:support@polcensur.dk\" title=\"Skriv til supporten\">support@polcensur.dk</a>.</p>" +
                 "<p>Mange hilsener,<br />polcensur.dk</p>"
             );
+        public static (string, string) BlocksUpdated(string username, string blocksUrl)
+            => (
+                "Blokeringskontrollen er gennemført",
+                $"<p>Kære {username},</p>" +
+                "<p>Vi her netop opdaget en ændring i dine blokeringer.</p>" +
+                $"<p>Du kan se en opdateret liste af blokeringer under din profil ved at klikke på <a href=\"{blocksUrl}\" title=\"Dine blokeringer\">blokeringer</a>.</p>" +
+                "<p>Vi håber, at du kan bruge det til noget.</p>" +
+                "<p>Mange hilsener,<br />polcensur.dk</p>"
+            );
     }
 }

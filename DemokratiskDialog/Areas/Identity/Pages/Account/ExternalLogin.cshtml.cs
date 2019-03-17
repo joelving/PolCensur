@@ -20,7 +20,8 @@ namespace DemokratiskDialog.Areas.Identity.Pages.Account
         private readonly ApplicationDbContext _dbContext;
         private readonly SignInManager<ApplicationUser> _signInManager;
         private readonly UserManager<ApplicationUser> _userManager;
-        private readonly IBackgroundQueue<CheckBlockedJob> _queue;
+        private readonly IBackgroundQueue<CheckBlockedJob> _checkQueue;
+        private readonly IBackgroundQueue<ContinuousCheckBlockedJob> _continuousQueue;
         private readonly TwitterService _twitterService;
         private readonly IDataProtectionProvider _protectionProvider;
         private readonly IClock _clock;
@@ -30,7 +31,8 @@ namespace DemokratiskDialog.Areas.Identity.Pages.Account
             ApplicationDbContext dbContext,
             SignInManager<ApplicationUser> signInManager,
             UserManager<ApplicationUser> userManager,
-            IBackgroundQueue<CheckBlockedJob> queue,
+            IBackgroundQueue<CheckBlockedJob> checkQueue,
+            IBackgroundQueue<ContinuousCheckBlockedJob> continuousQueue,
             TwitterService twitterService,
             IDataProtectionProvider protectionProvider,
             IClock clock,
@@ -39,7 +41,8 @@ namespace DemokratiskDialog.Areas.Identity.Pages.Account
             _dbContext = dbContext;
             _signInManager = signInManager;
             _userManager = userManager;
-            _queue = queue;
+            _checkQueue = checkQueue;
+            _continuousQueue = continuousQueue;
             _twitterService = twitterService;
             _protectionProvider = protectionProvider;
             _clock = clock;
@@ -66,7 +69,7 @@ namespace DemokratiskDialog.Areas.Identity.Pages.Account
             return new ChallengeResult(provider, properties);
         }
 
-        public async Task<IActionResult> OnGetCallbackAsync(string returnUrl = null, string remoteError = null, bool run = false, string email = null, bool? publicity = null)
+        public async Task<IActionResult> OnGetCallbackAsync(string returnUrl = null, string remoteError = null, bool run = false, string email = null, bool? publicity = null, bool continuous = false)
         {
             returnUrl = returnUrl ?? Url.Content("~/");
             if (remoteError != null)
@@ -104,7 +107,8 @@ namespace DemokratiskDialog.Areas.Identity.Pages.Account
                         info.ProviderKey,
                         info.Principal.Identity.Name,
                         info.AuthenticationTokens.FirstOrDefault(t => t.Name == "access_token")?.Value,
-                        info.AuthenticationTokens.FirstOrDefault(t => t.Name == "access_token_secret")?.Value
+                        info.AuthenticationTokens.FirstOrDefault(t => t.Name == "access_token_secret")?.Value,
+                        continuous
                     );
                 }
                 return LocalRedirect(returnUrl);
@@ -145,7 +149,8 @@ namespace DemokratiskDialog.Areas.Identity.Pages.Account
                                 info.ProviderKey,
                                 info.Principal.Identity.Name,
                                 info.AuthenticationTokens.FirstOrDefault(t => t.Name == "access_token")?.Value,
-                                info.AuthenticationTokens.FirstOrDefault(t => t.Name == "access_token_secret")?.Value
+                                info.AuthenticationTokens.FirstOrDefault(t => t.Name == "access_token_secret")?.Value,
+                                continuous
                             );
                         }
                         return LocalRedirect(returnUrl);
@@ -155,7 +160,7 @@ namespace DemokratiskDialog.Areas.Identity.Pages.Account
             }
         }
 
-        private async Task StartJob(string email, string checkingForUserId, string checkingForTwitterId, string checkingForScreenname, string accessToken, string accessTokenSecret)
+        private async Task StartJob(string email, string checkingForUserId, string checkingForTwitterId, string checkingForScreenname, string accessToken, string accessTokenSecret, bool continuous)
         {
             string protectedToken = null, protectedTokenSecret = null;
             if (accessTokenSecret != null)
@@ -164,21 +169,43 @@ namespace DemokratiskDialog.Areas.Identity.Pages.Account
                 protectedToken = protector.Protect(accessToken);
                 protectedTokenSecret = protector.Protect(accessTokenSecret);
             }
-            var job = new CheckBlockedJob
-            {
-                Email = email,
-                State = CheckBlockedJob.CheckBlockedJobState.Pending,
-                LastUpdate = _clock.GetCurrentInstant(),
-                CheckingForUserId = checkingForUserId,
-                CheckingForTwitterId = checkingForTwitterId,
-                CheckingForScreenName = checkingForScreenname,
-                AccessToken = protectedToken,
-                AccessTokenSecret = protectedTokenSecret
-            };
 
-            _dbContext.Jobs.Add(job);
-            await _dbContext.SaveChangesAsync();
-            await _queue.EnqueueAsync(job, HttpContext.RequestAborted);
+            if (continuous)
+            {
+                var job = new ContinuousCheckBlockedJob
+                {
+                    Email = email,
+                    State = ContinuousCheckBlockedJob.JobState.Pending,
+                    LastUpdate = _clock.GetCurrentInstant(),
+                    CheckingForUserId = checkingForUserId,
+                    CheckingForTwitterId = checkingForTwitterId,
+                    CheckingForScreenName = checkingForScreenname,
+                    AccessToken = protectedToken,
+                    AccessTokenSecret = protectedTokenSecret
+                };
+
+                _dbContext.ContinuousJobs.Add(job);
+                await _dbContext.SaveChangesAsync();
+                await _continuousQueue.EnqueueAsync(job, HttpContext.RequestAborted);
+            }
+            else
+            {
+                var job = new CheckBlockedJob
+                {
+                    Email = email,
+                    State = CheckBlockedJob.CheckBlockedJobState.Pending,
+                    LastUpdate = _clock.GetCurrentInstant(),
+                    CheckingForUserId = checkingForUserId,
+                    CheckingForTwitterId = checkingForTwitterId,
+                    CheckingForScreenName = checkingForScreenname,
+                    AccessToken = protectedToken,
+                    AccessTokenSecret = protectedTokenSecret
+                };
+
+                _dbContext.Jobs.Add(job);
+                await _dbContext.SaveChangesAsync();
+                await _checkQueue.EnqueueAsync(job, HttpContext.RequestAborted);
+            }
         }
     }
 }

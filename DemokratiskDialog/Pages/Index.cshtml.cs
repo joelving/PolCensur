@@ -1,12 +1,16 @@
 ﻿using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Net.Http;
 using System.Threading.Tasks;
 using DemokratiskDialog.Areas.Identity.Pages.Account;
 using DemokratiskDialog.Data;
 using DemokratiskDialog.Extensions;
 using DemokratiskDialog.Models;
 using DemokratiskDialog.Services;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -21,6 +25,7 @@ namespace DemokratiskDialog.Pages
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly UsersToCheck _userToCheck;
         private readonly IClock _clock;
+        private readonly ImageService _imageService;
         private readonly ILogger<ExternalLoginModel> _logger;
 
         public IndexModel(
@@ -29,6 +34,7 @@ namespace DemokratiskDialog.Pages
             UserManager<ApplicationUser> userManager,
             UsersToCheck userToCheck,
             IClock clock,
+            ImageService imageService,
             ILogger<ExternalLoginModel> logger)
         {
             _dbContext = dbContext;
@@ -36,6 +42,7 @@ namespace DemokratiskDialog.Pages
             _userManager = userManager;
             _userToCheck = userToCheck;
             _clock = clock;
+            _imageService = imageService;
             _logger = logger;
         }
 
@@ -56,6 +63,7 @@ namespace DemokratiskDialog.Pages
         public bool CanSubmit { get; set; }
 
         public CheckBlockedJob LatestJob { get; set; }
+        public ContinuousCheckBlockedJob LatestContinuousJob { get; set; }
 
         public async Task OnGetAsync()
         {
@@ -67,6 +75,12 @@ namespace DemokratiskDialog.Pages
                 {
                     DefaultPublicity = user.ShowProfileWithBlocks;
                     LatestJob = await _dbContext.GetLatestJobByUserId(user.Id);
+                    LatestContinuousJob = await _dbContext.GetLatestContinuousJobByUserId(user.Id);
+
+                    if (LatestContinuousJob?.LastUpdate > LatestJob?.LastUpdate)
+                        LatestJob = null;
+                    else
+                        LatestContinuousJob = null;
                     CanSubmit = await _dbContext.CanStartNewJobs(_clock, user.Id);
                 }
             }
@@ -80,7 +94,7 @@ namespace DemokratiskDialog.Pages
             Blockers = new List<Blocker>();
 
             var blockCounts = await _dbContext.BlockCounts.FromSql(
-                @"SELECT TOP 9
+                @"SELECT TOP 50
                 BlockedByTwitterId, COUNT(*) AS Count
                 FROM Blocks
                 GROUP BY BlockedByTwitterId
@@ -99,16 +113,22 @@ namespace DemokratiskDialog.Pages
                     AND b.BlockedByTwitterId = {0}
                     GROUP BY l.ProviderKey, u.UserName, u.ProfilePictureUrl, b.BlockedByTwitterId
                     ORDER BY MAX(b.Checked) DESC;", blockCount.BlockedByTwitterId).ToListAsync();
+                foreach (var userBlock in userBlocks)
+                    userBlock.ProfilePictureUrl = await _imageService.GetProfileImage(userBlock.Handle, "bigger");
 
-                var blocker = _userToCheck.FirstOrDefault(u => u.Profile.IdStr == blockCount.BlockedByTwitterId);
+                var blocker = _userToCheck.FindById(blockCount.BlockedByTwitterId);
+                if (blocker is null) continue;
 
                 Blockers.Add(new Blocker
                 {
-                    Handle = blocker?.Profile.ScreenName,
-                    ImageUrl = blocker?.Profile.ProfileImageUrlHttps?.ToString(),
+                    Handle = blocker?.ScreenName,
+                    ImageUrl = await _imageService.GetProfileImage(blocker?.ScreenName, "original"),
                     BlockCount = blockCount.Count,
                     BlockedProfiles = userBlocks
                 });
+
+                if (Blockers.Count >= 30)
+                    break;
             }
         }
     }

@@ -51,54 +51,14 @@ namespace DemokratiskDialog.Services
                 _logger.LogInformation($"Beginning to check blocks for user with local Id {job.CheckingForUserId} and Twitter Id '{job.CheckingForTwitterId}'.");
 
                 var existing = await _dbContext.Blocks.Where(b => b.UserId == job.CheckingForUserId).ToDictionaryAsync(b => b.BlockedByTwitterId, b => b);
-
-                var blocks = new List<string>();
-                int offset = 0, batchSize = 100;
-                while (offset < _usersToCheck.Count)
-                {
-                    var batch = _usersToCheck.Skip(offset).Take(batchSize);
-                    var profiles = await _twitterService.LookupByScreenNamesAsUser(job.CheckingForUserId, job.AccessToken, job.AccessTokenSecret, batch.Select(i => i.Profile.ScreenName), cancellationToken);
-                    var candidates = profiles.Where(p => p.Status is null);
-
-                    foreach (var userToCheck in candidates)
-                    {
-
-                        var twitterId = userToCheck.IdStr;
-                        var screenName = userToCheck.ScreenName;
-                        cancellationToken.ThrowIfCancellationRequested();
-                        if (twitterId == job.CheckingForTwitterId) continue;
-
-                        var isBlocked = await _twitterService.IsBlocked(job.CheckingForUserId, job.AccessToken, job.AccessTokenSecret, twitterId, cancellationToken);
-                        _logger.LogInformation($"User {job.CheckingForTwitterId} {(isBlocked ? "IS" : "is NOT")} by user '{screenName}' (Id {twitterId}).");
-
-                        if (isBlocked)
-                        {
-                            blocks.Add(twitterId);
-                            if (existing.ContainsKey(twitterId))
-                            {
-                                existing[twitterId].Checked = _clock.GetCurrentInstant();
-                            }
-                            else
-                            {
-                                var newBlock = new Block
-                                {
-                                    UserId = job.CheckingForUserId,
-                                    BlockedByTwitterId = twitterId,
-                                    Checked = _clock.GetCurrentInstant()
-                                };
-                                _dbContext.Blocks.Add(newBlock);
-                            }
-                            await _dbContext.SaveChangesAsync(cancellationToken);
-
-                        }
-                    }
-                    offset += batchSize;
-                }
+                List<string> blocks = await GetBlocksByList(job, existing, cancellationToken);
 
                 var removed = existing.Where(e => !blocks.Any(b => b == e.Key)).Select(e => e.Value);
                 if (removed.Any())
                 {
                     _dbContext.Blocks.RemoveRange(removed);
+                    var archived = removed.Select(b => ArchivedBlock.CreateFromBlock(b, _clock));
+                    _dbContext.ArchivedBlocks.AddRange(archived);
                     await _dbContext.SaveChangesAsync(cancellationToken);
                 }
 
@@ -137,6 +97,69 @@ namespace DemokratiskDialog.Services
             }
         }
 
+        private async Task<List<string>> GetBlocksByLookup(CheckBlockedJob job, Dictionary<string, Block> existing, CancellationToken cancellationToken)
+        {
+            var blocks = new List<string>();
+            int offset = 0, batchSize = 100;
+            while (offset < _usersToCheck.Count)
+            {
+                var batch = _usersToCheck.All.Skip(offset).Take(batchSize);
+                var profiles = await _twitterService.LookupByScreenNamesAsUser(job.CheckingForUserId, job.AccessToken, job.AccessTokenSecret, batch.Select(i => i.ScreenName), cancellationToken);
+                var candidates = profiles.Where(p => p.Status is null);
+                await VerifyBlocks(job, existing, blocks, candidates, cancellationToken);
+                offset += batchSize;
+            }
+
+            return blocks;
+        }
+
+        const string listOwner = "DemokratiskD";
+        const string listSlug = "demokratisk-dialog";
+        private async Task<List<string>> GetBlocksByList(CheckBlockedJob job, Dictionary<string, Block> existing, CancellationToken cancellationToken)
+        {
+            var blocks = new List<string>();
+
+            var profiles = await _twitterService.ListMembersAsUser(job.CheckingForUserId, job.AccessToken, job.AccessTokenSecret, listOwner, listSlug, cancellationToken);
+            var candidates = profiles.Where(p => p.Status is null);
+            await VerifyBlocks(job, existing, blocks, candidates, cancellationToken);
+            
+            return blocks;
+        }
+
+        private async Task VerifyBlocks(CheckBlockedJob job, Dictionary<string, Block> existing, List<string> blocks, IEnumerable<TwitterUser> candidates, CancellationToken cancellationToken)
+        {
+            foreach (var userToCheck in candidates)
+            {
+                var twitterId = userToCheck.IdStr;
+                var screenName = userToCheck.ScreenName;
+                cancellationToken.ThrowIfCancellationRequested();
+                if (twitterId == job.CheckingForTwitterId) continue;
+
+                var isBlocked = await _twitterService.IsBlocked(job.CheckingForUserId, job.AccessToken, job.AccessTokenSecret, twitterId, cancellationToken);
+                _logger.LogInformation($"User {job.CheckingForTwitterId} {(isBlocked ? "IS" : "is NOT")} by user '{screenName}' (Id {twitterId}).");
+
+                if (isBlocked)
+                {
+                    blocks.Add(twitterId);
+                    if (existing.ContainsKey(twitterId))
+                    {
+                        existing[twitterId].Checked = _clock.GetCurrentInstant();
+                    }
+                    else
+                    {
+                        var newBlock = new Block
+                        {
+                            UserId = job.CheckingForUserId,
+                            BlockedByTwitterId = twitterId,
+                            Checked = _clock.GetCurrentInstant()
+                        };
+                        _dbContext.Blocks.Add(newBlock);
+                    }
+                    await _dbContext.SaveChangesAsync(cancellationToken);
+                }
+            }
+        }
+
         public async Task ProcessJobOld((CheckBlockedJob job, Action callback) data, CancellationToken cancellationToken)
         {
             var (job, callback) = data;
@@ -149,10 +172,10 @@ namespace DemokratiskDialog.Services
                 var existing = await _dbContext.Blocks.Where(b => b.UserId == job.CheckingForUserId).ToDictionaryAsync(b => b.BlockedByTwitterId, b => b);
 
                 var blocks = new List<string>();
-                foreach (var userToCheck in _usersToCheck)
+                foreach (var userToCheck in _usersToCheck.All)
                 {
-                    var twitterId = userToCheck.Profile.IdStr;
-                    var screenName = userToCheck.Profile.ScreenName;
+                    var twitterId = userToCheck.IdStr;
+                    var screenName = userToCheck.ScreenName;
                     cancellationToken.ThrowIfCancellationRequested();
                     if (twitterId == job.CheckingForTwitterId) continue;
                     

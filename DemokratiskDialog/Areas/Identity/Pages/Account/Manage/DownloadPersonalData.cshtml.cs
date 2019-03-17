@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using DemokratiskDialog.Data;
+using DemokratiskDialog.Extensions;
 using DemokratiskDialog.Models;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -51,6 +52,13 @@ namespace DemokratiskDialog.Areas.Identity.Pages.Account.Manage
 
             var blocks = (await _dbContext.Blocks.Where(b => b.UserId == user.Id).ToListAsync()).Select(b => new
             {
+                FirstSeen = b.FirstSeen.ToDanishTime().ToString(),
+                Checked = b.Checked.ToDanishTime().ToString(),
+                b.BlockedByTwitterId
+            });
+
+            var archivedBlocks = (await _dbContext.ArchivedBlocks.Where(b => b.UserId == user.Id).ToListAsync()).Select(b => new
+            {
                 Checked = b.Checked.ToString(),
                 b.BlockedByTwitterId
             });
@@ -64,8 +72,20 @@ namespace DemokratiskDialog.Areas.Identity.Pages.Account.Manage
                 j.CheckingForScreenName
             });
 
+            var continuousJobs = (await _dbContext.ContinuousJobs.Where(j => j.CheckingForUserId == user.Id).ToListAsync()).Select(j => new
+            {
+                j.Email,
+                j.AccessToken,
+                j.AccessTokenSecret,
+                j.LastUpdate,
+                j.State,
+                j.CheckingForUserId,
+                j.CheckingForTwitterId,
+                j.CheckingForScreenName
+            });
+
             Response.Headers.Add("Content-Disposition", "attachment; filename=PersonalData.json");
-            return new FileContentResult(Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(new { personalData, blocks, jobs })), "text/json");
+            return new FileContentResult(Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(new { personalData, blocks, archivedBlocks, jobs, continuousJobs })), "text/json");
         }
     }
 }

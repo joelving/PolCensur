@@ -5,25 +5,19 @@
 }
 
 <style>
-    .blocking-profile {
+    .profile-image-container {
         position: relative;
-    }
-
-    .blocking-profile img {
         width: 100%;
+        padding-top: 100%;
     }
-
-    .blocking-profile .title {
+    .profile-image-container a {
         position: absolute;
-        bottom: 0;
+        top: 0;
         left: 0;
+        bottom: 0;
         right: 0;
-        color: black;
-        /*padding: .25em;*/
-        /*font-size: 1.25em;*/
-        font-weight: bold;
-        background-color: rgba(255,255,255,.6);
-        text-align: center;
+        background-size: cover;
+        background-position: center center;
     }
 
     .blocked-profile {
@@ -73,10 +67,13 @@
 <p class="text-muted text-center"><small>Baseret på kontrol af @Model.UsersChecked @(Model.UsersChecked == 1 ? "brugers" : "brugeres") Twitter-blokeringer.</small></p>
 
 <div class="card-deck">
-    @foreach (var blocker in Model.Blockers)
+    @for (int i = 0; i < 9; i++)
     {
+        var blocker = Model.Blockers[i];
         <div class="card mb-4">
-            <img src="@blocker.ImageUrl.Replace("_normal", "_400x400")" class="card-img-top" alt="...">
+            <div class="profile-image-container">
+                <a href="https://twitter.com/@blocker.Handle" title="@blocker.Handle" target="_blank" rel="noopener" style="background-image: url('@blocker.ImageUrl');"></a>
+            </div>
             <div class="card-body">
                 <h5 class="card-title">@@@blocker.Handle</h5>
                 <div class="container">
@@ -85,7 +82,41 @@
                         {
                             <div class="col-4 blocked-profile">
                                 <a class="" href="https://twitter.com/@blocked.Handle" title="@blocked.Handle" target="_blank" rel="noopener">
-                                    <img src="@blocked.ProfilePictureUrl.Replace("_normal", "_bigger")" class="img-fluid" />
+                                    <img src="@blocked.ProfilePictureUrl" class="img-fluid" />
+                                </a>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+            <div class="card-footer">
+                <small class="text-muted">I alt @blocker.BlockCount @(blocker.BlockCount == 1 ? "blokering" : "blokeringer")</small>
+            </div>
+        </div>
+    }
+</div>
+
+<div class="text-center">
+    <button class="btn btn-outline-secondary m-4" type="button" data-toggle="collapse" data-target="#moreBlockers" aria-expanded="false" aria-controls="moreBlockers">Vis flere</button>
+</div>
+
+<div class="card-deck collapse" id="moreBlockers">
+    @for (int i = 9; i < Model.Blockers.Count; i++)
+    {
+        var blocker = Model.Blockers[i];
+        <div class="card mb-4">
+            <div class="profile-image-container">
+                <a href="https://twitter.com/@blocker.Handle" title="@blocker.Handle" target="_blank" rel="noopener" style="background-image: url('@blocker.ImageUrl');"></a>
+            </div>
+            <div class="card-body">
+                <h5 class="card-title">@@@blocker.Handle</h5>
+                <div class="container">
+                    <div class="row">
+                        @foreach (var blocked in blocker.BlockedProfiles)
+                        {
+                            <div class="col-4 blocked-profile">
+                                <a class="" href="https://twitter.com/@blocked.Handle" title="@blocked.Handle" target="_blank" rel="noopener">
+                                    <img src="@blocked.ProfilePictureUrl" class="img-fluid" />
                                 </a>
                             </div>
                         }
@@ -100,8 +131,16 @@
 </div>
 
 
+
 <div id="check">
-    <partial name="_LatestJobState" model="Model.LatestJob" />
+    @if (!(Model.LatestJob is null))
+    {
+        <partial name="_LatestJobState" model="Model.LatestJob" />
+    }
+    @if (!(Model.LatestContinuousJob is null))
+    {
+        <partial name="_LatestContinuousJobState" model="Model.LatestContinuousJob" />
+    }
     @if (Model.CanSubmit)
     {
         <partial name="_CheckSubmissionPartial" model="new CheckSubmissionModel { Publicity = Model.DefaultPublicity }" />

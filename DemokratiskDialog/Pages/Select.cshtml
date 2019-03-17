@@ -1,0 +1,96 @@
+﻿@page
+@model DemokratiskDialog.Pages.SelectModel
+@{
+    ViewData["Title"] = "Sync";
+}
+
+<h1>Sync</h1>
+
+<style>
+    .form-actions {
+        position: fixed;
+        top: 50%;
+        height: 10em;
+        margin-top: -5em;
+        right: 5em;
+    }
+</style>
+
+<p>På nuværende tidspunkt indeholder lokale lister @Model.InternalCount profiler.</p>
+
+<form asp-page-handler="AddMissingUsers" method="post">
+    <button type="submit">Synkroniser til liste</button>
+</form>
+
+<form asp-page-handler="RemoveDuplicateUsers" method="post">
+    <button type="submit">Fjern dubletter</button>
+</form>
+
+<form asp-page-handler="SelectUsers" method="post">
+    <div class="form-actions">
+        @foreach (var list in Model.InternalSlugs)
+        {
+            <div class="m-5"><input type="submit" name="list" value="@list" /></div>
+        }
+    </div>
+
+    @foreach (var list in Model.Lists)
+    {
+        <div class="row">
+            <div class="col">
+                <h2>@list.Slug</h2>
+                <p>
+
+                </p>
+            </div>
+        </div>
+        <div class="row">
+            @*<div class="col-6">
+                    <h3>Intern</h3>
+                    <p>
+                        Antal medlemmer: @list.InternalCount<br />
+                        Sidst synkroniseret: @list.LastSyncedInternal?.ToDanishTime()
+                    </p>
+                    @if (list.AdditionalUsers.Count > 0)
+                    {
+                        <h4>Overskydende medlemmer:</h4>
+                        @foreach (var user in list.AdditionalUsers)
+                        {
+                        <div>@user.Name</div>
+                        }
+                    }
+                </div>*@
+
+            <div class="col-6">
+                <h3>Ekstern</h3>
+                <p>
+                    Antal medlemmer: @list.ExternalCount<br />
+                    Sidst synkroniseret: @list.LastSyncedExternal?.ToDanishTime()
+                </p>
+                @if (list.MissingUsers.Count > 0)
+                {
+                    <h4>Manglende medlemmer:</h4>
+                    @foreach (var user in list.MissingUsers)
+                    {
+                        <div class="row">
+                            <div class="col-2">
+                                <input type="checkbox" id="k-@user.IdStr" name="SelectedIds" value="@user.IdStr" />
+                            </div>
+                            <div class="col-10">
+                                <label for="k-@user.IdStr">
+                                    <div>@user.Name (<a href="https://twitter.com/@user.ScreenName" target="_blank" rel="noopener">@user.ScreenName</a>) (<a href="https://www.google.com/search?q=@user.Name.Replace(' ', '+')" target="_blank" rel="noopener">google</a>)</div>
+                                    <div>@user.Description</div>
+                                </label>
+                            </div>
+                        </div>
+                    }
+                }
+            </div>
+        </div>
+        <div class="row">
+            <div class="col">
+                <hr />
+            </div>
+        </div>
+    }
+</form>

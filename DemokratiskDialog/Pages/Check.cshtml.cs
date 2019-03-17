@@ -41,6 +41,7 @@ namespace DemokratiskDialog.Pages
         public bool CanSubmit { get; set; }
 
         public CheckBlockedJob LatestJob { get; set; }
+        public ContinuousCheckBlockedJob LatestContinuousJob { get; set; }
 
         public async Task OnGet()
         {
@@ -53,6 +54,13 @@ namespace DemokratiskDialog.Pages
                 {
                     Input.Publicity = user.ShowProfileWithBlocks;
                     LatestJob = await _dbContext.GetLatestJobByUserId(user.Id);
+                    LatestContinuousJob = await _dbContext.GetLatestContinuousJobByUserId(user.Id);
+
+                    if (LatestContinuousJob?.LastUpdate > LatestJob?.LastUpdate)
+                        LatestJob = null;
+                    else
+                        LatestContinuousJob = null;
+
                     CanSubmit = await _dbContext.CanStartNewJobs(_clock, user.Id);
                 }
             }
@@ -63,7 +71,7 @@ namespace DemokratiskDialog.Pages
                 return Page();
 
             // Request a redirect to the external login provider.
-            var redirectUrl = Url.Page("/Account/ExternalLogin", pageHandler: "Callback", values: new { area = "Identity", Run = true, Input.Email, Input.Publicity, returnUrl = Url.Page("/check-pending") });
+            var redirectUrl = Url.Page("/Account/ExternalLogin", pageHandler: "Callback", values: new { area = "Identity", Run = true, Input.Email, Input.Publicity, Input.Continuous, returnUrl = Url.Page("/check-pending") });
             var properties = _signInManager.ConfigureExternalAuthenticationProperties("Twitter", redirectUrl);
             return new ChallengeResult("Twitter", properties);
         }

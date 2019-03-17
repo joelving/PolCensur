@@ -143,6 +143,7 @@ namespace DemokratiskDialog.Services
         {
             // While there are exit times that are passed due still in the queue,
             // exit the semaphore and dequeue the exit time.
+            if (_isDisposed) return;
             int exitTime;
             while (_exitTimes.TryPeek(out exitTime)
                    && unchecked(exitTime - Environment.TickCount) <= 0)
@@ -155,6 +156,7 @@ namespace DemokratiskDialog.Services
             // the time until the next check should take place. If the 
             // queue is empty, then no exit times will occur until at least
             // one time unit has passed.
+            if (_isDisposed) return;
             int timeUntilNextCheck;
             if (_exitTimes.TryPeek(out exitTime))
                 timeUntilNextCheck = unchecked(exitTime - Environment.TickCount);
@@ -162,6 +164,7 @@ namespace DemokratiskDialog.Services
                 timeUntilNextCheck = TimeUnitMilliseconds;
 
             // Set the timer.
+            if (_isDisposed) return;
             _exitTimer.Change(timeUntilNextCheck, -1);
         }
 

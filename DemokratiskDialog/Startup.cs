@@ -1,8 +1,10 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
 using DemokratiskDialog.Data;
+using DemokratiskDialog.Extensions;
 using DemokratiskDialog.Models;
 using DemokratiskDialog.Options;
 using DemokratiskDialog.Services;
@@ -72,6 +74,13 @@ namespace DemokratiskDialog
             services.AddSingleton<IBackgroundQueue<CheckBlockedJob>>(new CheckBlockedJobQueue(50));
             services.AddTransient<IBackgroundJobProcessor<CheckBlockedJob>, CheckBlockedJobProcessor>();
             services.AddHostedService<BackgroundQueueService<CheckBlockedJob>>();
+            
+            services.AddSingleton<IBackgroundQueue<ContinuousCheckBlockedJob>>(new ContinuousCheckBlockedJobQueue(1_000));
+            services.AddTransient<IBackgroundJobProcessor<ContinuousCheckBlockedJob>, ContinuousCheckBlockedJobProcessor>();
+            services.AddHostedService<BackgroundQueueService<ContinuousCheckBlockedJob>>();
+
+            services.AddHostedService<ContinuousCheckBlockedJobReloader>();
+
             services.AddSingleton<IClock>(SystemClock.Instance);
             services.AddHttpClient("RetryBacking")
                 .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler())
@@ -86,37 +95,18 @@ namespace DemokratiskDialog
             services.AddScoped<TwitterAdminService>();
             services.AddSingleton<TwitterRateLimits>();
             services.AddScoped<EmailService>();
+            services.AddScoped<ImageService>();
 
             services.Configure<TwitterApiOptions>(Configuration.GetSection("Twitter"));
             services.Configure<TwitterApiAdminOptions>(Configuration.GetSection("TwitterAdmin"));
             services.Configure<EmailServiceOptions>(Configuration.GetSection("EmailService"));
-            
-            var twitterHandles = new UsersToCheck(File.ReadAllLines(Path.Combine(Environment.ContentRootPath, "influencers.csv"))
-                .Select(JsonConvert.DeserializeObject<Influencer>));
-            services.AddSingleton(twitterHandles);
-            services.AddSingleton(
-                new ListsToCheck(new[]
-                {
-                    ("ernstpoulsen", "valg-folketinget-2019", UserCategory.Politician, "valg-folketinget-2019"),
-                    ("ernstpoulsen", "valg-europaparlament-2019", UserCategory.Politician, "valg-europaparlament-2019"),
-                    ("ernstpoulsen", "region-nordjylland", UserCategory.Politician, "region-nordjylland"),
-                    ("ernstpoulsen", "region-midtjylland", UserCategory.Politician, "region-midtjylland"),
-                    ("ernstpoulsen", "region-syddanmark", UserCategory.Politician, "region-syddanmark"),
-                    ("ernstpoulsen", "region-sjælland", UserCategory.Politician, "region-sj-lland"),
-                    ("ernstpoulsen", "region-hovedstaden", UserCategory.Politician, "region-hovedstaden"),
-                    ("ernstpoulsen", "byrådsmedlemmer-i-danmark", UserCategory.Politician, "byr-dsmedlemmer-i-danmark"),
-                    ("ernstpoulsen", "politiske-partier", UserCategory.Politician, "politiske-partier"),
-                    ("ernstpoulsen", "off-myndigheder-topfolk", UserCategory.Public, "off-myndigheder-topfolk"),
-                    ("ernstpoulsen", "off-myndigheder", UserCategory.Public, "off-myndigheder"),
-                    ("ernstpoulsen", "fagforeninger-og-topfolk", UserCategory.Union, "fagforeninger-og-topfolk"),
-                    ("ernstpoulsen", "fagforeninger", UserCategory.Union, "fagforeninger"),
-                    ("ernstpoulsen", "firmaer-større-topfolk", UserCategory.Business, "firmaer-st-rre-topfolk"),
-                    ("ernstpoulsen", "interesseorg-topfolk", UserCategory.Lobby, "interesseorg-topfolk"),
-                    ("ernstpoulsen", "interesseorganisationer", UserCategory.Lobby, "interesseorganisationer"),
-                    ("ernstpoulsen", "kommunikationsfolk-dk", UserCategory.Spin, "kommunikationsfolk-dk"),
-                    ("ernstpoulsen", "danske-journalister", UserCategory.Journalist, "danske-journalister")
-                })
-            );
+
+            services.AddUsersToCheck(Path.Combine(Environment.ContentRootPath, "lists"));
+            services.AddListsToCheck();
+
+            //var twitterHandles = new UsersToCheck(File.ReadAllLines(Path.Combine(Environment.ContentRootPath, "influencers.csv"))
+            //    .Select(JsonConvert.DeserializeObject<Influencer>));
+            //services.AddSingleton(twitterHandles);
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.

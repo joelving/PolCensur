@@ -4,15 +4,13 @@ using System.Linq;
 using System.Threading.Tasks;
 using DemokratiskDialog.Models;
 using DemokratiskDialog.Services;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.RazorPages;
 using Newtonsoft.Json;
 
 namespace DemokratiskDialog.Pages
 {
-    public class HandlesModel : PageModel
+    public class HandlesModel : AdminPageModel
     {
         private readonly IHostingEnvironment _environment;
         private readonly TwitterService _twitterService;
@@ -33,7 +31,7 @@ namespace DemokratiskDialog.Pages
 
         public IActionResult OnGet()
         {
-            if (!_environment.IsDevelopment())
+            if (!IsAdmin())
                 return NotFound();
 
             var profiles = System.IO.File.ReadAllLines(Path.Combine(_environment.ContentRootPath, "twitter-handles-ids.csv")).Select(JsonConvert.DeserializeObject<TwitterUser>);
@@ -51,7 +49,7 @@ namespace DemokratiskDialog.Pages
 
         public async Task<IActionResult> OnPostAsync()
         {
-            if (!_environment.IsDevelopment())
+            if (!IsAdmin())
                 return NotFound();
 
             var handles = System.IO.File.ReadAllLines(Path.Combine(_environment.ContentRootPath, "twitter-handles.csv"));

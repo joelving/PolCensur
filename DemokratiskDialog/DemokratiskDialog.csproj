@@ -7,6 +7,45 @@
     <UserSecretsId>44e10656-9974-4e8c-9811-72ca4c71fee5</UserSecretsId>
   </PropertyGroup>
 
+  <ItemGroup>
+    <Compile Remove="Migrations\20190317081615_ContinuousJobs.cs" />
+    <Compile Remove="Migrations\20190317081615_ContinuousJobs.Designer.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Remove="lists\internal-selected-erhverv.csv" />
+    <None Remove="lists\internal-selected-fagforeninger.csv" />
+    <None Remove="lists\internal-selected-interesseorganisationer.csv" />
+    <None Remove="lists\internal-selected-journalister.csv" />
+    <None Remove="lists\internal-selected-kommunikation.csv" />
+    <None Remove="lists\internal-selected-myndigheder.csv" />
+    <None Remove="lists\internal-selected-politikere.csv" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="lists\internal-selected-erhverv.csv">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="lists\internal-selected-fagforeninger.csv">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="lists\internal-selected-interesseorganisationer.csv">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="lists\internal-selected-journalister.csv">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="lists\internal-selected-kommunikation.csv">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="lists\internal-selected-myndigheder.csv">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="lists\internal-selected-politikere.csv">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
 
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.App" />

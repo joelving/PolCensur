@@ -12,7 +12,7 @@ using Newtonsoft.Json;
 
 namespace DemokratiskDialog.Pages
 {
-    public class GetFromListsModel : PageModel
+    public class GetFromListsModel : AdminPageModel
     {
         private readonly IHostingEnvironment _environment;
         private readonly TwitterService _twitterService;
@@ -27,14 +27,14 @@ namespace DemokratiskDialog.Pages
             _listsToCheck = listsToCheck;
         }
 
-        public List<Influencer> Profiles { get; set; }
+        public Dictionary<UserCategory, List<TwitterUser>> Profiles { get; set; }
 
         public async Task<IActionResult> OnGet()
         {
-            if (!_environment.IsDevelopment())
+            if (!IsAdmin())
                 return NotFound();
 
-            var knownIds = _usersToCheck.Select(u => u.Profile.IdStr).ToHashSet();
+            var knownIds = _usersToCheck.SelectMany(c => c.Value).Select(u => u.IdStr).ToHashSet();
 
             var filePath = Path.Combine(_environment.ContentRootPath, "rwar.csv");
             if (System.IO.File.Exists(filePath))
@@ -43,13 +43,13 @@ namespace DemokratiskDialog.Pages
             }
             else
             {
-                Profiles = new List<Influencer>();
+                Profiles = new Dictionary<UserCategory, List<TwitterUser>>();
                 foreach (var (owner, slug, category, internalSlug) in _listsToCheck)
                 {
-                    Profiles.AddRange((await _twitterService.ListMembers(owner, slug, HttpContext.RequestAborted)).Select(u => new Influencer { Category = category, Profile = u }));
+                    Profiles.Add(category, (await _twitterService.ListMembers(owner, slug, HttpContext.RequestAborted)).ToList());
                 }
-                Profiles = Profiles.GroupBy(p => p.Profile.IdStr).Select(g => g.FirstOrDefault()).OrderByDescending(u => u.Profile.FollowersCount).Take(500).ToList();
-                await System.IO.File.WriteAllLinesAsync(filePath, Profiles.Select(p => JsonConvert.SerializeObject(p)));
+                //Profiles = Profiles.GroupBy(p => p.Profile.IdStr).Select(g => g.FirstOrDefault()).OrderByDescending(u => u.Profile.FollowersCount).Take(500).ToList();
+                //await System.IO.File.WriteAllLinesAsync(filePath, Profiles.Select(p => JsonConvert.SerializeObject(p)));
             }
 
             return Page();

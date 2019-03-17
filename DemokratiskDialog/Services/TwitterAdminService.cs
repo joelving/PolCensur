@@ -52,6 +52,20 @@ namespace DemokratiskDialog.Services
             response.EnsureSuccessStatusCode();
         }
 
+        public async Task AddProfilesToListById(string slug, IEnumerable<string> batch, CancellationToken cancellationToken)
+        {
+            await _rateLimits.User.List.WaitToProceed("DemokratiskD", cancellationToken);
+
+            var response = await SendRequestAsUser(
+                HttpMethod.Post,
+                $"{_twitterApiBaseUrl}/lists/members/create_all.json?owner_screen_name=DemokratiskD&slug={slug}",
+                new[] { new KeyValuePair<string, string>("user_id", string.Join(",", batch)) },
+                cancellationToken
+            );
+
+            response.EnsureSuccessStatusCode();
+        }
+
         public async Task<TwitterUser[]> ListMembers(string ownerScreenName, string slug, CancellationToken cancellationToken = default)
         {
             await _rateLimits.User.List.WaitToProceed("DemokratiskD", cancellationToken);

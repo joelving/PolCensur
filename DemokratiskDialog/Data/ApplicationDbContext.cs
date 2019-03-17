@@ -25,7 +25,24 @@ namespace DemokratiskDialog.Data
 
             modelBuilder
                 .Entity<Block>()
+                .Property(e => e.FirstSeen)
+                .HasConversion(instantConversion);
+            modelBuilder
+                .Entity<Block>()
                 .Property(e => e.Checked)
+                .HasConversion(instantConversion);
+
+            modelBuilder
+                .Entity<ArchivedBlock>()
+                .Property(e => e.FirstSeen)
+                .HasConversion(instantConversion);
+            modelBuilder
+                .Entity<ArchivedBlock>()
+                .Property(e => e.Checked)
+                .HasConversion(instantConversion);
+            modelBuilder
+                .Entity<ArchivedBlock>()
+                .Property(e => e.VerifiedGone)
                 .HasConversion(instantConversion);
 
             modelBuilder
@@ -38,6 +55,11 @@ namespace DemokratiskDialog.Data
                 .Property(e => e.LastUpdate)
                 .HasConversion(instantConversion);
 
+            modelBuilder
+                .Entity<ContinuousCheckBlockedJob>()
+                .Property(e => e.LastUpdate)
+                .HasConversion(instantConversion);
+
             //modelBuilder
             //    .Query<BlockCounts>().ToView("Blocks");
             //modelBuilder
@@ -46,8 +68,10 @@ namespace DemokratiskDialog.Data
             base.OnModelCreating(modelBuilder);
         }
         public DbSet<Block> Blocks { get; set; }
+        public DbSet<ArchivedBlock> ArchivedBlocks { get; set; }
         public DbSet<CheckBlockedJob> Jobs { get; set; }
-
+        public DbSet<ContinuousCheckBlockedJob> ContinuousJobs { get; set; }
+        
         public DbSet<ExceptionLog> ExceptionLogs { get; set; }
 
         public DbQuery<BlockCounts> BlockCounts { get; set; }

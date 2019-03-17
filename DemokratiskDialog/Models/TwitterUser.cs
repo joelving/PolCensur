@@ -20,6 +20,9 @@ namespace DemokratiskDialog.Models
         [JsonProperty("screen_name")]
         public string ScreenName { get; set; }
 
+        [JsonProperty("description")]
+        public string Description { get; set; }
+
         [JsonProperty("protected")]
         public bool Protected { get; set; }
 

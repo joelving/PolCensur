@@ -6,10 +6,17 @@
 
 <h1>@ViewData["Title"]</h1>
 
-<partial name="_LatestJobState" model="Model.LatestJob" />
+@if (!(Model.LatestJob is null))
+{
+    <partial name="_LatestJobState" model="Model.LatestJob" />
+}
+@if (!(Model.LatestContinuousJob is null))
+{
+    <partial name="_LatestContinuousJobState" model="Model.LatestContinuousJob" />
+}
 @if (Model.CanSubmit)
 {
-<partial name="_CheckSubmissionPartial" model="Model.Input" />
+    <partial name="_CheckSubmissionPartial" model="Model.Input" />
 }
 
 @section Scripts {
