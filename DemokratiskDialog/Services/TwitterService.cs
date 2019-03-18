@@ -177,6 +177,9 @@ namespace DemokratiskDialog.Services
                 cancellationToken: cancellationToken
             );
 
+            if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+                throw new TwitterNotFoundException();
+
             response.EnsureSuccessStatusCode();
 
             return JsonConvert.DeserializeObject<ListMembersResponse>(await response.Content.ReadAsStringAsync()).Users;
