@@ -10,12 +10,15 @@ namespace DemokratiskDialog.Services
     public class BackgroundQueueService<T> : BackgroundService
     {
         public IBackgroundQueue<T> TaskQueue { get; }
+        public TaskManager TaskManager { get; }
+
         private readonly ILogger _logger;
         private readonly IServiceScopeFactory _scopeFactory;
 
-        public BackgroundQueueService(IBackgroundQueue<T> taskQueue, ILoggerFactory loggerFactory, IServiceScopeFactory scopeFactory)
+        public BackgroundQueueService(IBackgroundQueue<T> taskQueue, TaskManager taskManager, ILoggerFactory loggerFactory, IServiceScopeFactory scopeFactory)
         {
             TaskQueue = taskQueue;
+            TaskManager = taskManager;
             _logger = loggerFactory.CreateLogger<BackgroundQueueService<T>>();
             _scopeFactory = scopeFactory;
         }
@@ -32,7 +35,7 @@ namespace DemokratiskDialog.Services
             {
                 var item = await TaskQueue.DequeueAsync(cancellationToken);
 
-                Task.Run(async () =>
+                var task = Task.Run(async () =>
                 {
                     if (cancellationToken.IsCancellationRequested)
                         return;
@@ -46,7 +49,7 @@ namespace DemokratiskDialog.Services
                             var processor = scope.ServiceProvider.GetRequiredService<IBackgroundJobProcessor<T>>();
 
                             // The queue is running on it's own thread, dispatching jobs to the thread pool. This is fine since the processing is async and non-blocking.
-                            await processor.ProcessJob(item, cancellationToken);
+                            await processor.ProcessJob((item.job, item.callback), cancellationToken);
                         }
                         catch (Exception ex)
                         {
@@ -54,6 +57,7 @@ namespace DemokratiskDialog.Services
                         }
                     }
                 }, cancellationToken);
+                TaskManager.TryAdd(item.id, task);
             }
 
             _logger.LogInformation("Queue Service is stopping.");

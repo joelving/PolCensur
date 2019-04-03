@@ -180,6 +180,9 @@ namespace DemokratiskDialog.Services
             if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
                 throw new TwitterNotFoundException();
 
+            if ((int)response.StatusCode >= 500)
+                throw new TwitterNetworkException();
+
             response.EnsureSuccessStatusCode();
 
             return JsonConvert.DeserializeObject<ListMembersResponse>(await response.Content.ReadAsStringAsync()).Users;

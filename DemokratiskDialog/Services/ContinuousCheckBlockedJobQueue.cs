@@ -50,13 +50,13 @@ namespace DemokratiskDialog.Services
             }
         }
 
-        public async Task<(ContinuousCheckBlockedJob job, Action callback)> DequeueAsync(CancellationToken cancellationToken)
+        public async Task<(Guid id, ContinuousCheckBlockedJob job, Action callback)> DequeueAsync(CancellationToken cancellationToken)
         {
             // This ensures we can never dequeue unless the semaphore has been increased by a corresponding release.
             await _queuedItems.WaitAsync(cancellationToken);
             _workItems.TryDequeue(out var job);
 
-            return (job, () => _maxQueueSize.Release());
+            return (job.Id, job, () => _maxQueueSize.Release());
         }
     }
 }

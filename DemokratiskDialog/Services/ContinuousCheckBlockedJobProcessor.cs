@@ -94,6 +94,10 @@ namespace DemokratiskDialog.Services
                         {
                             // Do nothing. This may pass.
                         }
+                        catch (TwitterNetworkException ex)
+                        {
+                            // Do nothing. This may pass.
+                        }
                     }
                 }
             }
@@ -117,7 +121,6 @@ namespace DemokratiskDialog.Services
                 else
                 {
                     // Server requested cancellation.
-                    await _dbContext.LogException(job.Id.ToString(), "ContinuousCheckBlockedJob", cex, _clock);
                     _logger.LogWarning($"Check blocks of '{job.CheckingForUserId}' was cancelled, most likely due to shutdown.");
                     await MarkPending(job);
                 }

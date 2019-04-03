@@ -1,5 +1,7 @@
 ﻿@model ContinuousCheckBlockedJob
 @inject IClock _clock
+@inject TaskManager _taskManager
+
 
 @{
     var disableLink = ViewData.ContainsKey("DisableLink") && (bool)ViewData["DisableLink"];
@@ -7,30 +9,10 @@
 
 @if (!(Model is null))
 {
+    var taskStatus = _taskManager.TryGetStatus(Model.Id);
     if (Model.State == ContinuousCheckBlockedJob.JobState.Pending)
     {
-        <div class="alert alert-info">
-            Løbende kontrol af dine blokeringer er ved at blive sat igang.
-        </div>
-    }
-    else if (Model.State == ContinuousCheckBlockedJob.JobState.Running)
-    {
-        if (Model.IsStale(_clock))
-        {
-            <div class="alert alert-warning">
-                Din løbende kontrol er sat igang, men det ser ud som om den er gået i stå.<br />
-                Sidst vi hørte fra den var @Model.LastUpdate.ToDanishTime().<br />
-                Du kan enten væbne dig med tålmodighed eller <a asp-area="Identity" asp-page="/Account/Manage/ContinuousJobs">stoppe den løbende kontrol</a> og starte den påny.
-            </div>
-        }
-        else
-        {
-            var minutesSinceLastUpdate = (int)_clock.GetCurrentInstant().Minus(Model.LastUpdate).TotalMinutes;
-            <div class="alert alert-info">
-                Du har en løbende kontrol kørende. Seneste kontrol var for @minutesSinceLastUpdate @(minutesSinceLastUpdate == 1 ? "minut" : "minutter") siden.<br />
-                Du kan til hver en tid <a asp-area="Identity" asp-page="/Account/Manage/ContinuousJobs">stoppe den løbende kontrol</a>.
-            </div>
-        }
+
     }
     else if (Model.State == ContinuousCheckBlockedJob.JobState.Completed)
     {
@@ -48,5 +30,44 @@
             Din løbende kontrol fejlede under udførslen. Det kan enten skylde en teknisk fejl fra vores side - det beklager vi! - eller at tilladelse til at tilgå din Twitter-konto er blevet trukket tilbage.<br />
             I alle tilfælde må du meget gerne forsøge igen - og kontakte os på <a href="mailto:support@polcensur.dk" title="Skriv til supporten">support@polcensur.dk</a>, hvis det fortsætter.
         </div>
+    }
+    else
+    {
+        if (taskStatus == TaskStatus.Created)
+        {
+            if (Model.IsStale(_clock))
+            {
+                <div class="alert alert-warning">
+                    Din løbende kontrol er ved at blive sat igang, men det tager længere tid end normalt.<br />
+                    Sidst vi hørte fra den var @Model.LastUpdate.ToDanishTime().<br />
+                    Du kan enten væbne dig med tålmodighed eller <a asp-area="Identity" asp-page="/Account/Manage/ContinuousJobs">stoppe den løbende kontrol</a> og starte den påny.
+                </div>
+            }
+            else
+            {
+                <div class="alert alert-info">
+                    Løbende kontrol af dine blokeringer er ved at blive sat igang.
+                </div>
+            }
+        }
+        else if (taskStatus == TaskStatus.WaitingForActivation || taskStatus == TaskStatus.WaitingToRun || taskStatus == TaskStatus.Running)
+        {
+            if (Model.IsStale(_clock))
+            {
+                <div class="alert alert-warning">
+                    Din løbende kontrol er sat igang, men det ser ud som om den er gået i stå.<br />
+                    Sidst vi hørte fra den var @Model.LastUpdate.ToDanishTime().<br />
+                    Du kan enten væbne dig med tålmodighed eller <a asp-area="Identity" asp-page="/Account/Manage/ContinuousJobs">stoppe den løbende kontrol</a> og starte den påny.
+                </div>
+            }
+            else
+            {
+                var minutesSinceLastUpdate = (int)_clock.GetCurrentInstant().Minus(Model.LastUpdate).TotalMinutes;
+                <div class="alert alert-info">
+                    Du har en løbende kontrol kørende. Seneste kontrol var for @minutesSinceLastUpdate @(minutesSinceLastUpdate == 1 ? "minut" : "minutter") siden.<br />
+                    Du kan til hver en tid <a asp-area="Identity" asp-page="/Account/Manage/ContinuousJobs">stoppe den løbende kontrol</a>.
+                </div>
+            }
+        }
     }
 }

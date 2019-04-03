@@ -79,6 +79,7 @@ namespace DemokratiskDialog
             services.AddTransient<IBackgroundJobProcessor<ContinuousCheckBlockedJob>, ContinuousCheckBlockedJobProcessor>();
             services.AddHostedService<BackgroundQueueService<ContinuousCheckBlockedJob>>();
 
+            services.AddSingleton<TaskManager>();
             services.AddHostedService<ContinuousCheckBlockedJobReloader>();
 
             services.AddSingleton<IClock>(SystemClock.Instance);
