@@ -1,6 +1,8 @@
 ﻿using DemokratiskDialog.Models;
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -17,6 +19,8 @@ namespace DemokratiskDialog.Services
         {
             _maxQueueSize = new SemaphoreSlim(maxQueueSize);
         }
+
+        public List<string> GetAllActiveUserIds() => _cancellationTokenSources.Keys.ToList();
 
         public async Task EnqueueAsync(ContinuousCheckBlockedJob job, CancellationToken cancellationToken = default)
         {
@@ -58,5 +62,10 @@ namespace DemokratiskDialog.Services
 
             return (job.Id, job, () => _maxQueueSize.Release());
         }
+
+        public int GetQueuedCount() => _queuedItems.CurrentCount;
+        public int GetAvailableCount() => _maxQueueSize.CurrentCount;
+
+        public void AllowOne() => _maxQueueSize.Release();
     }
 }

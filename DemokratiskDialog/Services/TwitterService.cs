@@ -11,6 +11,7 @@ using OAuth;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
@@ -57,9 +58,9 @@ namespace DemokratiskDialog.Services
                 cancellationToken: cancellationToken
             );
 
-            if (response.StatusCode != System.Net.HttpStatusCode.Unauthorized)
+            if (response.StatusCode != HttpStatusCode.Unauthorized)
                 return false;
-                
+
             var obj = JToken.Parse(await response.Content.ReadAsStringAsync()) as JObject;
             if (obj == null || !obj.ContainsKey("errors"))
                 return false;
@@ -67,7 +68,8 @@ namespace DemokratiskDialog.Services
             if (!(obj["errors"] is JArray errors))
                 return false;
 
-            bool hasErrorCode(JToken e, int code) {
+            bool hasErrorCode(JToken e, int code)
+            {
                 var error = e as JObject;
                 if (!error.ContainsKey("code"))
                     return false;
@@ -80,7 +82,7 @@ namespace DemokratiskDialog.Services
 
             if (errors.Any(e => hasErrorCode(e, 32)))
                 throw new TwitterUnauthorizedException();
-            
+
             //if (errors.Any(e => hasErrorCode(e, 88)))
             //{
             //    // TODO: Rate limited - check for next reset and wait.
@@ -101,7 +103,7 @@ namespace DemokratiskDialog.Services
                 cancellationToken
             );
 
-            response.EnsureSuccessStatusCode();
+            EnsureTwitterSuccess(response);
 
             return JsonConvert.DeserializeObject<TwitterUser[]>(await response.Content.ReadAsStringAsync());
         }
@@ -123,7 +125,7 @@ namespace DemokratiskDialog.Services
                 cancellationToken: cancellationToken
             );
 
-            response.EnsureSuccessStatusCode();
+            EnsureTwitterSuccess(response);
 
             return JsonConvert.DeserializeObject<TwitterUser[]>(await response.Content.ReadAsStringAsync());
         }
@@ -141,7 +143,7 @@ namespace DemokratiskDialog.Services
                 cancellationToken: cancellationToken
             );
 
-            response.EnsureSuccessStatusCode();
+            EnsureTwitterSuccess(response);
         }
 
         public async Task<TwitterUser[]> ListMembers(string ownerScreenName, string slug, CancellationToken cancellationToken = default)
@@ -155,9 +157,27 @@ namespace DemokratiskDialog.Services
                 cancellationToken: cancellationToken
             );
 
-            response.EnsureSuccessStatusCode();
+            EnsureTwitterSuccess(response);
 
             return JsonConvert.DeserializeObject<ListMembersResponse>(await response.Content.ReadAsStringAsync()).Users;
+        }
+
+        public void EnsureTwitterSuccess(HttpResponseMessage response)
+        {
+            if (response.IsSuccessStatusCode)
+                return;
+
+            if (response.StatusCode == HttpStatusCode.Unauthorized || response.StatusCode == HttpStatusCode.Forbidden)
+                throw new TwitterUnauthorizedException();
+
+            if (response.StatusCode == HttpStatusCode.TooManyRequests)
+                throw new TwitterTransientException();
+
+            var statusCodeNumber = (int)response.StatusCode;
+            if (400 <= statusCodeNumber && statusCodeNumber < 500)
+                throw new TwitterPermanentException();
+
+            throw new TwitterTransientException();
         }
 
         public async Task<TwitterUser[]> ListMembersAsUser(string checkingForUserId, string protectedUserAccessToken, string protectedUserAccessTokenSecret, string ownerScreenName, string slug, CancellationToken cancellationToken = default)
@@ -177,13 +197,7 @@ namespace DemokratiskDialog.Services
                 cancellationToken: cancellationToken
             );
 
-            if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
-                throw new TwitterNotFoundException();
-
-            if ((int)response.StatusCode >= 500)
-                throw new TwitterNetworkException();
-
-            response.EnsureSuccessStatusCode();
+            EnsureTwitterSuccess(response);
 
             return JsonConvert.DeserializeObject<ListMembersResponse>(await response.Content.ReadAsStringAsync()).Users;
         }
@@ -199,7 +213,7 @@ namespace DemokratiskDialog.Services
                 cancellationToken: cancellationToken
             );
 
-            response.EnsureSuccessStatusCode();
+            EnsureTwitterSuccess(response);
 
             return JsonConvert.DeserializeObject<TwitterUser>(await response.Content.ReadAsStringAsync());
         }
@@ -225,12 +239,21 @@ namespace DemokratiskDialog.Services
             if (payload != null)
                 message.Content = new FormUrlEncodedContent(payload);
 
-            return await _httpClient.SendAsync(message, cancellationToken);
+            try
+            {
+                return await _httpClient.SendAsync(message, cancellationToken);
+            }
+            catch (Exception)
+            {
+                // Special case to ensure that network errors don't break everything.
+                throw new TwitterTransientException();
+            }
         }
 
         private async Task<HttpResponseMessage> SendRequestAsApp(TwitterApiOptions options, HttpMethod method, string url, IEnumerable<KeyValuePair<string, string>> payload = null, CancellationToken cancellationToken = default)
         {
-            var message = new HttpRequestMessage {
+            var message = new HttpRequestMessage
+            {
                 Method = method,
                 RequestUri = new Uri(url),
                 Headers = { { "Authorization", $"Bearer {options.BearerToken}" } }
@@ -238,7 +261,15 @@ namespace DemokratiskDialog.Services
             if (payload != null)
                 message.Content = new FormUrlEncodedContent(payload);
 
-            return await _httpClient.SendAsync(message, cancellationToken);
+            try
+            {
+                return await _httpClient.SendAsync(message, cancellationToken);
+            }
+            catch (Exception)
+            {
+                // Special case to ensure that network errors don't break everything.
+                throw new TwitterTransientException();
+            }
         }
     }
 }

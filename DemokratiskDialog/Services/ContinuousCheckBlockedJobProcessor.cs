@@ -54,9 +54,11 @@ namespace DemokratiskDialog.Services
                 {
                     var existing = (await _dbContext.Blocks.Where(b => b.UserId == job.CheckingForUserId).ToListAsync())
                         .GroupBy(b => b.BlockedByTwitterId).ToDictionary(g => g.Key, g => g.First());
-                    while (!linkedCts.IsCancellationRequested)
+                    while (true)
                     {
+                        linkedCts.Token.ThrowIfCancellationRequested();
                         await ratelimiter.WaitToProceed(linkedCts.Token);
+                        linkedCts.Token.ThrowIfCancellationRequested();
                         _logger.LogInformation($"Beginning to check blocks for user with local Id {job.CheckingForUserId} and Twitter Id '{job.CheckingForTwitterId}'.");
 
                         try
@@ -90,11 +92,7 @@ namespace DemokratiskDialog.Services
                             job.LastUpdate = _clock.GetCurrentInstant();
                             await _dbContext.SaveChangesAsync();
                         }
-                        catch (TwitterNotFoundException ex)
-                        {
-                            // Do nothing. This may pass.
-                        }
-                        catch (TwitterNetworkException ex)
+                        catch (TwitterTransientException)
                         {
                             // Do nothing. This may pass.
                         }
@@ -171,11 +169,13 @@ namespace DemokratiskDialog.Services
                     }
                     else
                     {
+                        var now = _clock.GetCurrentInstant();
                         var newBlock = new Block
                         {
                             UserId = job.CheckingForUserId,
                             BlockedByTwitterId = twitterId,
-                            Checked = _clock.GetCurrentInstant()
+                            FirstSeen = now,
+                            Checked = now
                         };
                         blocks.Add(newBlock);
                         _dbContext.Blocks.Add(newBlock);

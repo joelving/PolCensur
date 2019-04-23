@@ -10,26 +10,29 @@
         width: 100%;
         padding-top: 100%;
     }
-    .profile-image-container a {
-        position: absolute;
-        top: 0;
-        left: 0;
-        bottom: 0;
-        right: 0;
-        background-size: cover;
-        background-position: center center;
-    }
+
+        .profile-image-container a {
+            position: absolute;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            right: 0;
+            background-size: cover;
+            background-position: center center;
+        }
 
     .blocked-profile {
         padding-left: 5px;
         padding-right: 5px;
     }
-    .blocked-profile a {
-        width: 100%;
-    }
-    .blocked-profile a img {
-        width: 100%;
-    }
+
+        .blocked-profile a {
+            width: 100%;
+        }
+
+            .blocked-profile a img {
+                width: 100%;
+            }
 
     @@media (min-width: 576px) {
         .card {
@@ -43,6 +46,11 @@
             max-width: 50%;
             min-width: 30%;
         }
+    }
+
+    .chartist-tooltip {
+        color: #6c757d;
+        background-color: rgba(0,0,0,.03);
     }
 </style>
 
@@ -62,37 +70,63 @@
     </div>
 </div>
 
+<h2 class="text-center mt-5">Statistik</h2>
+<div class="d-md-none text-center">
+    <button class="btn btn-outline-secondary m-4" type="button" data-toggle="collapse" data-target="#statistics" aria-expanded="false" aria-controls="statistics">Vis statistik</button>
+</div>
+<div class="container collapse d-md-block" id="statistics">
+    <div class="row">
+        <div class="col-12 col-sm-4">
+            Brugere løbende kontrolleret: @Model.Stats.UsersContinuouslyChecked
+        </div>
+        <div class="col-12 col-sm-4">
+            Brugere kontrolleret i alt: @Model.Stats.UsersChecked
+        </div>
+        <div class="col-12 col-sm-4">
+            Blokeringer registreret i alt: @Model.Stats.TotalNumberOfBlocks
+        </div>
+
+        <div class="col-12 mt-3">
+            <div class="text-center">Antal blokeringer per blokerede:</div>
+            <div class="blocked-histogram"></div>
+        </div>
+        <div class="col-12">
+            <div class="text-center">Antal blokeringer per blokerende:</div>
+            <div class="blocker-histogram"></div>
+        </div>
+    </div>
+</div>
+
 
 <h2 class="text-center mt-5">Top 9 flittigste* blockere</h2>
-<p class="text-muted text-center"><small>Baseret på kontrol af @Model.UsersChecked @(Model.UsersChecked == 1 ? "brugers" : "brugeres") Twitter-blokeringer.</small></p>
-
+<p class="text-muted text-center"><small>Baseret på kontrol af polcensur.dk's brugeres Twitter-blokeringer.</small></p>
 <div class="card-deck">
     @for (int i = 0; i < 9; i++)
     {
         var blocker = Model.Blockers[i];
-        <div class="card mb-4">
-            <div class="profile-image-container">
-                <a href="https://twitter.com/@blocker.Handle" title="@blocker.Handle" target="_blank" rel="noopener" style="background-image: url('@blocker.ImageUrl');"></a>
-            </div>
-            <div class="card-body">
-                <h5 class="card-title">@@@blocker.Handle</h5>
-                <div class="container">
-                    <div class="row">
-                        @foreach (var blocked in blocker.BlockedProfiles)
+    <div class="card mb-4">
+        <div class="profile-image-container">
+            <a href="https://twitter.com/@blocker.Handle" title="@blocker.Handle" target="_blank" rel="noopener" style="background-image: url('@blocker.ImageUrl');"></a>
+        </div>
+        <div class="card-body">
+            <h5 class="card-title">@@@blocker.Handle</h5>
+            <div class="container">
+                <div class="row">
+                    @foreach (var blocked in blocker.BlockedProfiles)
                         {
-                            <div class="col-4 blocked-profile">
-                                <a class="" href="https://twitter.com/@blocked.Handle" title="@blocked.Handle" target="_blank" rel="noopener">
-                                    <img src="@blocked.ProfilePictureUrl" class="img-fluid" />
-                                </a>
-                            </div>
-                        }
+                    <div class="col-4 blocked-profile">
+                        <a class="" href="https://twitter.com/@blocked.Handle" title="@blocked.Handle" target="_blank" rel="noopener">
+                            <img src="@blocked.ProfilePictureUrl" class="img-fluid" />
+                        </a>
                     </div>
+                        }
                 </div>
             </div>
-            <div class="card-footer">
-                <small class="text-muted">I alt @blocker.BlockCount @(blocker.BlockCount == 1 ? "blokering" : "blokeringer")</small>
-            </div>
         </div>
+        <div class="card-footer">
+            <small class="text-muted">I alt @blocker.BlockCount @(blocker.BlockCount == 1 ? "blokering" : "blokeringer")</small>
+        </div>
+    </div>
     }
 </div>
 
@@ -104,29 +138,29 @@
     @for (int i = 9; i < Model.Blockers.Count; i++)
     {
         var blocker = Model.Blockers[i];
-        <div class="card mb-4">
-            <div class="profile-image-container">
-                <a href="https://twitter.com/@blocker.Handle" title="@blocker.Handle" target="_blank" rel="noopener" style="background-image: url('@blocker.ImageUrl');"></a>
-            </div>
-            <div class="card-body">
-                <h5 class="card-title">@@@blocker.Handle</h5>
-                <div class="container">
-                    <div class="row">
-                        @foreach (var blocked in blocker.BlockedProfiles)
+    <div class="card mb-4">
+        <div class="profile-image-container">
+            <a href="https://twitter.com/@blocker.Handle" title="@blocker.Handle" target="_blank" rel="noopener" style="background-image: url('@blocker.ImageUrl');"></a>
+        </div>
+        <div class="card-body">
+            <h5 class="card-title">@@@blocker.Handle</h5>
+            <div class="container">
+                <div class="row">
+                    @foreach (var blocked in blocker.BlockedProfiles)
                         {
-                            <div class="col-4 blocked-profile">
-                                <a class="" href="https://twitter.com/@blocked.Handle" title="@blocked.Handle" target="_blank" rel="noopener">
-                                    <img src="@blocked.ProfilePictureUrl" class="img-fluid" />
-                                </a>
-                            </div>
-                        }
+                    <div class="col-4 blocked-profile">
+                        <a class="" href="https://twitter.com/@blocked.Handle" title="@blocked.Handle" target="_blank" rel="noopener">
+                            <img src="@blocked.ProfilePictureUrl" class="img-fluid" />
+                        </a>
                     </div>
+                        }
                 </div>
             </div>
-            <div class="card-footer">
-                <small class="text-muted">I alt @blocker.BlockCount @(blocker.BlockCount == 1 ? "blokering" : "blokeringer")</small>
-            </div>
         </div>
+        <div class="card-footer">
+            <small class="text-muted">I alt @blocker.BlockCount @(blocker.BlockCount == 1 ? "blokering" : "blokeringer")</small>
+        </div>
+    </div>
     }
 </div>
 
@@ -135,18 +169,79 @@
 <div id="check">
     @if (!(Model.LatestJob is null))
     {
-        <partial name="_LatestJobState" model="Model.LatestJob" />
+    <partial name="_LatestJobState" model="Model.LatestJob" />
     }
     @if (!(Model.LatestContinuousJob is null))
     {
-        <partial name="_LatestContinuousJobState" model="Model.LatestContinuousJob" />
+    <partial name="_LatestContinuousJobState" model="Model.LatestContinuousJob" />
     }
     @if (Model.CanSubmit)
     {
-        <partial name="_CheckSubmissionPartial" model="new CheckSubmissionModel { Publicity = Model.DefaultPublicity }" />
+    <partial name="_CheckSubmissionPartial" model="new CheckSubmissionModel { Publicity = Model.DefaultPublicity }" />
     }
 </div>
 
+@section Styles  {
+    <link rel="stylesheet" href="~/lib/chartist/chartist.css" />
+    <link rel="stylesheet" href="~/lib/chartist-plugin-tooltip/chartist-plugin-tooltip.css" />
+}
+
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
+    <script src="~/lib/chartist/chartist.min.js"></script>
+    <script src="~/lib/chartist-plugin-tooltip/chartist-plugin-tooltip.min.js"></script>
+    <script src="~/lib/chartist-plugin-accessibility/chartist-plugin-accessibility.min.js"></script>
+    <script type="text/javascript">
+        var isHistogramsSetup = false;
+        var setupHistograms = function () {
+            if (isHistogramsSetup)
+                return;
+            isHistogramsSetup = true;
+
+            var responsiveOptions = [
+                // Options override for media > 1000px
+                ['(min-width: 768px)', {
+                    horizontalBars: false,
+                    height: undefined
+                }]
+            ];
+            new Chartist.Bar('.blocked-histogram', {
+                labels: [@String.Join(", ", Model.Stats.BlockedHistogram.Select(h => h.Item1))],
+                series: [
+                    { name: "Antal brugere med det givne antal blokeringer", data: [@Html.Raw(String.Join(", ", Model.Stats.BlockedHistogram.Select(h => "{ meta: '" + h.Item1 + "', value: " + h.Item2 + "}")))] }
+                ]
+            }, {
+                    fullWidth: true,
+                    horizontalBars: true,
+                    height: '@(Model.Stats.BlockedHistogram.Count * 10)px',
+                    plugins: [
+                        Chartist.plugins.tooltip({
+                            tooltipFnc: function (meta, value) { return value + " brugere er blevet blokeret af " + meta + " profiler." }
+                        }),
+                        Chartist.plugins.ctAccessibility({ caption: "Antal blokeringer per bruger", seriesHeader: "Antal blokeringer per bruger" })
+                    ]
+                }, responsiveOptions
+            );
+            new Chartist.Bar('.blocker-histogram', {
+                labels: [@String.Join(", ", Model.Stats.BlockerHistogram.Select(h => h.Item1))],
+                series: [
+                    { name: "Antal blokerende profiler med det givne antal blokeringer", data: [@Html.Raw(String.Join(", ", Model.Stats.BlockerHistogram.Select(h => "{ meta: '" + h.Item1 + "', value: " + h.Item2 + "}")))] }
+                ]
+            }, {
+                    fullWidth: true,
+                    horizontalBars: true,
+                    height: '@(Model.Stats.BlockerHistogram.Count * 10)px',
+                    plugins: [
+                        Chartist.plugins.tooltip({
+                            tooltipFnc: function (meta, value) { return value + " personer har blokeret " + meta + " brugere." }
+                        }),
+                        Chartist.plugins.ctAccessibility({ caption: "Antal blokeringer per blokerende", seriesHeader: "Antal blokeringer per blokerende" })
+                    ]
+                }, responsiveOptions
+            );
+        };
+        $('#statistics').on('show.bs.collapse', setupHistograms);
+        if (window.matchMedia("(min-width: 768px)").matches)
+            setupHistograms();
+    </script>
 }

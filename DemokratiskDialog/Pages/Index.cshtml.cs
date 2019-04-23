@@ -56,14 +56,47 @@ namespace DemokratiskDialog.Pages
 
         public List<Blocker> Blockers { get; set; }
 
-        public int UsersChecked { get; set; }
-
         public bool DefaultPublicity { get; set; }
 
         public bool CanSubmit { get; set; }
 
         public CheckBlockedJob LatestJob { get; set; }
         public ContinuousCheckBlockedJob LatestContinuousJob { get; set; }
+
+        public class StatsModel
+        {
+            public int UsersChecked { get; set; }
+            public int UsersContinuouslyChecked { get; set; }
+            public List<(int, int)> BlockedHistogram { get; set; }
+            public List<(int, int)> BlockerHistogram { get; set; }
+            public int TotalNumberOfBlocks { get; set; }
+
+        }
+
+        public StatsModel Stats { get; set; }
+        public async Task PrepareStats()
+        {
+            Stats = new StatsModel();
+
+            var continuousJobs = (await _dbContext.ContinuousJobs.Select(j => j.CheckingForTwitterId).Distinct().ToListAsync()).ToHashSet();
+            var jobs = (await _dbContext.Jobs.Select(j => j.CheckingForTwitterId).Distinct().ToListAsync()).ToHashSet();
+            jobs.UnionWith(continuousJobs);
+            Stats.UsersChecked = jobs.Count;
+            Stats.UsersContinuouslyChecked = await _dbContext.ContinuousJobs.Where(j => j.State == ContinuousCheckBlockedJob.JobState.Pending || j.State == ContinuousCheckBlockedJob.JobState.Running)
+                .Select(j => j.CheckingForTwitterId).Distinct().CountAsync();
+
+            var blocked = (await _dbContext.Blocks.GroupBy(b => b.UserId).Select(g => new { User = g.Key, Count = g.Count() }).ToListAsync())
+                .GroupBy(b => b.Count).ToDictionary(g => g.Key, g => g.Count());
+            var maxBlocked = blocked.Keys.Any() ? blocked.Keys.Max() : 0;
+            Stats.BlockedHistogram = Enumerable.Range(1, maxBlocked).Select(i => (i, blocked.ContainsKey(i) ? blocked[i] : 0)).ToList();
+
+            var blockers = await _dbContext.Blocks.GroupBy(b => b.BlockedByTwitterId).Select(g => new { User = g.Key, Count = g.Count() }).ToListAsync();
+            var blockersHistogram = blockers.GroupBy(b => b.Count).ToDictionary(g => g.Key, g => g.Count());
+            var maxBlocker = blockersHistogram.Keys.Any() ? blockersHistogram.Keys.Max() : 0;
+            Stats.BlockerHistogram = Enumerable.Range(1, maxBlocker).Select(i => (i, blockersHistogram.ContainsKey(i) ? blockersHistogram[i] : 0)).ToList();
+
+            Stats.TotalNumberOfBlocks = blocked.Sum(kvp => kvp.Key * kvp.Value);
+        }
 
         public async Task OnGetAsync()
         {
@@ -86,11 +119,11 @@ namespace DemokratiskDialog.Pages
             }
 
             await PrepareBlocks();
+            await PrepareStats();
         }
 
         private async Task PrepareBlocks()
         {
-            UsersChecked = await _dbContext.Jobs.Select(j => j.CheckingForUserId).Distinct().CountAsync();
             Blockers = new List<Blocker>();
 
             var blockCounts = await _dbContext.BlockCounts.FromSql(
@@ -112,7 +145,7 @@ namespace DemokratiskDialog.Pages
                     AND l.LoginProvider = 'Twitter'
                     AND b.BlockedByTwitterId = {0}
                     GROUP BY l.ProviderKey, u.UserName, u.ProfilePictureUrl, b.BlockedByTwitterId
-                    ORDER BY MAX(b.Checked) DESC;", blockCount.BlockedByTwitterId).ToListAsync();
+                    ORDER BY NEWID();", blockCount.BlockedByTwitterId).ToListAsync();
                 foreach (var userBlock in userBlocks)
                     userBlock.ProfilePictureUrl = await _imageService.GetProfileImage(userBlock.Handle, "bigger");
 

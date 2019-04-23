@@ -2,6 +2,8 @@
 using Microsoft.Extensions.Options;
 using SendGrid;
 using SendGrid.Helpers.Mail;
+using System.Net;
+using System.Net.Http;
 using System.Threading.Tasks;
 
 namespace DemokratiskDialog.Services
@@ -17,6 +19,9 @@ namespace DemokratiskDialog.Services
 
         public Task<Response> SendEmailAsync(string email, string subject, string message)
         {
+            if (string.IsNullOrWhiteSpace(email))
+                return Task.FromResult(new Response(HttpStatusCode.BadRequest, new StringContent($"{nameof(email)} cannot be empty."), default));
+
             var client = new SendGridClient(Options.SendGridKey);
             var msg = new SendGridMessage()
             {

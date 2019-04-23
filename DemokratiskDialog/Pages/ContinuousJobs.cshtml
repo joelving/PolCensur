@@ -1,0 +1,36 @@
+﻿@page
+@model DemokratiskDialog.Pages.ContinuousJobsModel
+@{
+    ViewData["Title"] = "ContinuousJobs";
+}
+
+<h1 class="display-4">Løbende kontroller</h1>
+
+<div class="row">
+    <div class="col-12 col-sm-6">
+        Job i kø: @Model.QueuedCount
+    </div>
+    <div class="col-12 col-sm-6">
+        Plads i kø: @Model.AvailableCount
+        <form method="post" asp-page-handler="IncreaseAvailable">
+            <input type="submit" value="Udvid kø" />
+        </form>
+    </div>
+
+    <div class="col-12">
+        <h2>Igangværende jobs</h2>
+    </div>
+    @foreach (var userId in Model.ActiveUsers)
+    {
+        <div class="col-12 col-sm-6">
+            User Id: @userId
+        </div>
+        <div class="col-12 col-sm-6">
+            <form method="post" asp-page-handler="TerminateTask">
+                <input type="hidden" name="userId" value="@userId" />
+                <input type="submit" value="Afslut job" />
+            </form>
+        </div>
+        <div class="col-12"><hr /></div>
+    }
+</div>
