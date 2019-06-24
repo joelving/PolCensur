@@ -63,27 +63,15 @@ namespace DemokratiskDialog.Services
 
                         try
                         {
-                            List<Block> blocks = await GetBlocksByList(job, existing, linkedCts.Token);
+                            var (blocks, hasNewBlocks) = await GetBlocksByList(job, existing, linkedCts.Token);
 
-                            var removed = existing.Where(e => !blocks.Any(b => b.BlockedByTwitterId == e.Key)).Select(e => e.Value).ToList();
-                            if (removed.Any())
-                            {
-                                foreach (var oldBlock in removed)
-                                    existing.Remove(oldBlock.BlockedByTwitterId);
+                            var unblockCandidates = existing.Where(e => !blocks.Any(b => b.BlockedByTwitterId == e.Key)).Select(e => e.Value).ToList();
+                            var hasUnblocks = await VerifyUnblocks(job, unblockCandidates, existing, cancellationToken);
 
-                                _dbContext.Blocks.RemoveRange(removed);
-
-                                var archived = removed.Select(b => ArchivedBlock.CreateFromBlock(b, _clock));
-                                _dbContext.ArchivedBlocks.AddRange(archived);
-
+                            if (_dbContext.ChangeTracker.HasChanges())
                                 await _dbContext.SaveChangesAsync(linkedCts.Token);
-                            }
 
-                            var added = blocks.Where(b => !existing.Any(e => e.Key == b.BlockedByTwitterId)).ToList();
-                            foreach (var newBlock in added)
-                                existing.Add(newBlock.BlockedByTwitterId, newBlock);
-
-                            if (added.Any() || removed.Any())
+                            if (hasNewBlocks || hasUnblocks)
                             {
                                 var (subject, body) = EmailTemplates.BlocksUpdated(job.CheckingForScreenName, "https://polcensur.dk/profile/blocks");
                                 await _emailService.SendEmailAsync(job.Email, subject, body);
@@ -138,18 +126,45 @@ namespace DemokratiskDialog.Services
             }
         }
 
+        private async Task<bool> VerifyUnblocks(ContinuousCheckBlockedJob job, List<Block> unblockCandidates, Dictionary<string, Block> existing, CancellationToken cancellationToken)
+        {
+            var unblocks = false;
+            foreach (var oldBlock in unblockCandidates)
+            {
+                var twitterId = oldBlock.BlockedByTwitterId;
+                cancellationToken.ThrowIfCancellationRequested();
+                if (twitterId == job.CheckingForTwitterId) continue;
+
+                var isBlocked = await _twitterService.IsBlocked(job.CheckingForUserId, job.AccessToken, job.AccessTokenSecret, twitterId, cancellationToken);
+                if (!isBlocked)
+                {
+                    _logger.LogInformation($"User {job.CheckingForTwitterId} has been unblocked by user with Id {twitterId}.");
+
+                    existing.Remove(twitterId);
+                    _dbContext.Blocks.Remove(oldBlock);
+
+                    var archived = ArchivedBlock.CreateFromBlock(oldBlock, _clock);
+                    _dbContext.ArchivedBlocks.Add(archived);
+
+                    unblocks = true;
+                }
+            }
+            return unblocks;
+        }
+
         const string listOwner = "DemokratiskD";
         const string listSlug = "demokratisk-dialog";
-        private async Task<List<Block>> GetBlocksByList(ContinuousCheckBlockedJob job, Dictionary<string, Block> existing, CancellationToken cancellationToken)
+        private async Task<(List<Block>, bool)> GetBlocksByList(ContinuousCheckBlockedJob job, Dictionary<string, Block> existing, CancellationToken cancellationToken)
         {
             var profiles = await _twitterService.ListMembersAsUser(job.CheckingForUserId, job.AccessToken, job.AccessTokenSecret, listOwner, listSlug, cancellationToken);
             var candidates = profiles.Where(p => p.Status is null);
             return await VerifyBlocks(job, existing, candidates, cancellationToken);
         }
 
-        private async Task<List<Block>> VerifyBlocks(ContinuousCheckBlockedJob job, Dictionary<string, Block> existing, IEnumerable<TwitterUser> candidates, CancellationToken cancellationToken)
+        private async Task<(List<Block>, bool)> VerifyBlocks(ContinuousCheckBlockedJob job, Dictionary<string, Block> existing, IEnumerable<TwitterUser> candidates, CancellationToken cancellationToken)
         {
             var blocks = new List<Block>();
+            var newBlocks = false;
             foreach (var userToCheck in candidates)
             {
                 var twitterId = userToCheck.IdStr;
@@ -158,7 +173,6 @@ namespace DemokratiskDialog.Services
                 if (twitterId == job.CheckingForTwitterId) continue;
 
                 var isBlocked = await _twitterService.IsBlocked(job.CheckingForUserId, job.AccessToken, job.AccessTokenSecret, twitterId, cancellationToken);
-                _logger.LogInformation($"User {job.CheckingForTwitterId} {(isBlocked ? "IS" : "is NOT")} by user '{screenName}' (Id {twitterId}).");
 
                 if (isBlocked)
                 {
@@ -169,6 +183,7 @@ namespace DemokratiskDialog.Services
                     }
                     else
                     {
+                        _logger.LogInformation($"User {job.CheckingForTwitterId} has been blocked by user '{screenName}' (Id {twitterId}).");
                         var now = _clock.GetCurrentInstant();
                         var newBlock = new Block
                         {
@@ -179,10 +194,11 @@ namespace DemokratiskDialog.Services
                         };
                         blocks.Add(newBlock);
                         _dbContext.Blocks.Add(newBlock);
+                        newBlocks = true;
                     }
                 }
             }
-            return blocks;
+            return (blocks, newBlocks);
         }
 
         private async Task MarkPending(ContinuousCheckBlockedJob job)

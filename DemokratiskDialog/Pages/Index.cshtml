@@ -101,7 +101,7 @@
 <h2 class="text-center mt-5">Top 9 flittigste* blockere</h2>
 <p class="text-muted text-center"><small>Baseret på kontrol af polcensur.dk's brugeres Twitter-blokeringer.</small></p>
 <div class="card-deck">
-    @for (int i = 0; i < 9; i++)
+    @for (int i = 0; i < 9 && i < Model.Blockers.Count; i++)
     {
         var blocker = Model.Blockers[i];
     <div class="card mb-4">
