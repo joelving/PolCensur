@@ -93,6 +93,7 @@ namespace DemokratiskDialog
                     TimeSpan.FromSeconds(8)
                 }));
             services.AddScoped<TwitterService>();
+            services.AddScoped<BlockService>();
             services.AddScoped<TwitterAdminService>();
             services.AddSingleton<TwitterRateLimits>();
             services.AddScoped<EmailService>();
