@@ -40,7 +40,7 @@ namespace DemokratiskDialog.Pages
 
                 try
                 {
-                    await _context.LogException(RequestId, routeWhereExceptionOccurred, exceptionThatOccurred, _clock);
+                    await _context.LogException(RequestId, routeWhereExceptionOccurred, exceptionThatOccurred, _clock, HttpContext.RequestAborted);
                 }
                 catch (Exception)
                 { }

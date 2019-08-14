@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Newtonsoft.Json;
 using NodaTime;
 using System;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace DemokratiskDialog.Data
@@ -88,17 +89,17 @@ namespace DemokratiskDialog.Data
                 ExceptionType = exception?.GetType().Name,
                 Timestamp = clock.GetCurrentInstant()
             };
-        public Task LogException(string identifier, string path, Exception exception, IClock clock)
+        public Task LogException(string identifier, string path, Exception exception, IClock clock, CancellationToken cancellationToken)
         {
             ExceptionLogs.Add(GetBaseExceptionLog(identifier, path, exception, clock));
-            return SaveChangesAsync();
+            return SaveChangesAsync(cancellationToken);
         }
-        public Task LogException<T>(string identifier, string path, Exception exception, T data, IClock clock)
+        public Task LogException<T>(string identifier, string path, Exception exception, T data, IClock clock, CancellationToken cancellationToken)
         {
             var log = GetBaseExceptionLog(identifier, path, exception, clock);
             log.Data = JsonConvert.SerializeObject(data);
             ExceptionLogs.Add(log);
-            return SaveChangesAsync();
+            return SaveChangesAsync(cancellationToken);
         }
     }
 }

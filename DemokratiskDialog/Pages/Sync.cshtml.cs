@@ -140,7 +140,7 @@ namespace DemokratiskDialog.Pages
                 }
                 catch (Exception ex)
                 {
-                    await _dbContext.LogException("SyncInternal", "/sync", ex, _clock);
+                    await _dbContext.LogException("SyncInternal", "/sync", ex, _clock, HttpContext.RequestAborted);
                 }
             }
             return RedirectToPage();
@@ -159,7 +159,7 @@ namespace DemokratiskDialog.Pages
                 }
                 catch (Exception ex)
                 {
-                    await _dbContext.LogException("SyncExternal", "/sync", ex, _clock);
+                    await _dbContext.LogException("SyncExternal", "/sync", ex, _clock, HttpContext.RequestAborted);
                 }
             }
             return RedirectToPage();

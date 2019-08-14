@@ -51,7 +51,7 @@ namespace DemokratiskDialog.Services
             {
                 // We cannot possibly continue. Abort and notify user to reauthorize.
                 _logger.LogError(tuex, $"Authentication error occurred trying to check blocks of '{job.CheckingForUserId}'.");
-                await _dbContext.LogException(job.Id.ToString(), "CheckBlockedJob", tuex, _clock);
+                await _dbContext.LogException(job.Id.ToString(), "CheckBlockedJob", tuex, _clock, cancellationToken);
 
                 var (subject, body) = EmailTemplates.UnauthorizedError(job.CheckingForScreenName, "https://polcensur.dk/login");
                 await _emailService.SendEmailAsync(job.Email, subject, body);
@@ -59,13 +59,13 @@ namespace DemokratiskDialog.Services
             }
             catch (OperationCanceledException cex)
             {
-                await _dbContext.LogException(job.Id.ToString(), "CheckBlockedJob", cex, _clock);
+                await _dbContext.LogException(job.Id.ToString(), "CheckBlockedJob", cex, _clock, cancellationToken);
                 _logger.LogWarning($"Check blocks of '{job.CheckingForUserId}' was cancelled.");
                 await MarkFailed(job);
             }
             catch (Exception ex)
             {
-                await _dbContext.LogException(job.Id.ToString(), "CheckBlockedJob", ex, _clock);
+                await _dbContext.LogException(job.Id.ToString(), "CheckBlockedJob", ex, _clock, cancellationToken);
                 _logger.LogError(ex, $"Exception occurred trying to check blocks of '{job.CheckingForUserId}'.");
                 var (subject, body) = EmailTemplates.Failed(job.CheckingForScreenName, "https://polcensur.dk");
                 await _emailService.SendEmailAsync(job.Email, subject, body);
